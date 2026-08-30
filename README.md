@@ -43,7 +43,20 @@ python3 -m http.server 8080
 
 ## Deployment
 
-This repo is designed to deploy as-is to a static host (e.g. Cloudflare Pages) with no build command and `/` as the output directory.
+Deployed to Cloudflare via the Git integration, which runs `npx wrangler deploy`. The repo ships a `wrangler.jsonc` that declares it as an assets-only static site — the whole repo root is the asset directory, so there is no build step:
+
+```jsonc
+{
+  "name": "backride-dates",
+  "compatibility_date": "2026-08-30",
+  "assets": {
+    "directory": "./",
+    "not_found_handling": "single-page-application"
+  }
+}
+```
+
+Dashboard settings that must match: **Build command** empty, **Root directory** `/`, and **Production branch** `main`.
 
 ## Notes for the series
 
