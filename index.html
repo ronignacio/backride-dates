@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <title>Backride Dates — The Luzon Map</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Backride Dates: 100 motorcycle date destinations within a day's ride of Camarin, North Caloocan, plotted on an interactive map of Luzon.">
+<meta name="description" content="Backride Dates: 100 motorcycle date destinations within a day's ride of Camarin, North Caloocan, plotted on an interactive map of Luzon — with a challenge tracker and rating scoreboard.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -12,8 +12,6 @@
   :root{
     --sea:#080D14;
     --sea-2:#0D1620;
-    --land:#1B2A2E;
-    --land-hi:#26393C;
     --coast:#4E7A75;
     --ink:#E8EEF0;
     --ink-dim:#7E9198;
@@ -22,8 +20,17 @@
     --w:#46A8C4;
     --e:#7CC47F;
     --s:#C98BDB;
+    /* Chart steps: same hue families as the map pins, stepped into the
+       dark-mode lightness band so bars stay legible and CVD-safe. */
+    --n-chart:#B8840D;
+    --w-chart:#1E8CAE;
+    --e-chart:#4E9E58;
+    --s-chart:#A863C4;
     --home:#FF5C46;
     --line:#1E2C33;
+    --surface:#0C141B;
+    --star:#FFD666;
+    --good:#7CC47F;
     --disp:"Barlow Condensed", "Oswald", "Haettenschweiler", Impact, sans-serif;
     --body:"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
@@ -41,7 +48,7 @@
   .wrap{max-width:1180px;margin:0 auto}
 
   /* ---------- header ---------- */
-  header{border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:18px}
+  header{border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:14px}
   .eyebrow{
     font-family:var(--disp);font-size:13px;letter-spacing:.24em;text-transform:uppercase;
     color:var(--ink-dim);margin:0 0 6px;display:flex;align-items:center;gap:10px;
@@ -54,8 +61,22 @@
   h1 em{font-style:normal;color:var(--ink-faint)}
   .sub{margin:0;color:var(--ink-dim);font-size:14px;max-width:56ch;line-height:1.55}
 
+  /* ---------- view tabs ---------- */
+  .tabs{display:flex;gap:2px;margin-bottom:16px;border-bottom:1px solid var(--line)}
+  .tab{
+    font-family:var(--disp);font-size:16px;letter-spacing:.14em;text-transform:uppercase;
+    background:transparent;border:0;border-bottom:2px solid transparent;color:var(--ink-faint);
+    padding:9px 16px 8px;cursor:pointer;transition:.16s;margin-bottom:-1px;
+  }
+  .tab:hover{color:var(--ink-dim)}
+  .tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink)}
+  .tab .badge{
+    font-size:12px;color:var(--ink-faint);margin-left:6px;
+  }
+  .view[hidden]{display:none}
+
   /* ---------- controls ---------- */
-  .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:18px 0 14px}
+  .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 14px}
   .chip{
     font-family:var(--disp);font-size:15px;letter-spacing:.1em;text-transform:uppercase;
     background:transparent;color:var(--ink-dim);border:1px solid var(--line);
@@ -99,18 +120,40 @@
   .pin{cursor:pointer;transform-box:fill-box;transform-origin:50% 100%}
   .pin .body{stroke:#0A1017;stroke-width:.8;transition:.18s}
   .pin .eye{fill:#0A1017}
-  .pin .halo{opacity:0;transition:.2s}
+  /* Decorative only: without this the invisible 13px halo of one pin
+     swallows clicks aimed at a neighbour in the dense Rizal/Laguna clusters. */
+  .pin .halo{opacity:0;transition:.2s;pointer-events:none}
   .pin:hover .halo{opacity:.28}
   .pin.sel .halo{opacity:.4}
   .pin.dim{opacity:.13;pointer-events:none}
-  .pin.done .body{fill:#3C4C52 !important}
-  .pin.done .eye{fill:#7CC47F}
   .pin .code{
     font-family:var(--disp);font-size:6.4px;letter-spacing:.06em;fill:var(--ink-dim);
     text-anchor:middle;opacity:0;transition:.2s;pointer-events:none;
   }
   .showcodes .pin:not(.dim) .code{opacity:1}
   .pin.sel .body{stroke:#fff;stroke-width:1.4}
+
+  /* --- picked for a challenge: ringed pin with a star --- */
+  .pin .ring{opacity:0;fill:none;stroke:var(--star);stroke-width:1.1;transition:.2s}
+  .pin .star{opacity:0;fill:var(--star);transition:.2s;pointer-events:none}
+  /* Spin only the rings that are actually showing — otherwise all 100 pins
+     run an infinite animation behind opacity:0. */
+  .pin.picked .ring{opacity:.95;animation:ringspin 9s linear infinite;
+    transform-box:fill-box;transform-origin:50% 50%}
+  .pin.picked .star{opacity:1}
+  .pin.picked .eye{opacity:0}
+  .pin.picked .body{stroke:var(--star);stroke-width:1.2}
+  @keyframes ringspin{to{transform:rotate(360deg)}}
+
+  /* --- ridden: muted body, green tick, score badge --- */
+  .pin.ridden .body{fill:#3C4C52 !important;stroke:#0A1017;stroke-width:.8}
+  .pin.ridden .eye{opacity:1;fill:var(--good)}
+  .pin.ridden .ring,.pin.ridden .star{opacity:0}
+  .pin .scorebadge{
+    font-family:var(--disp);font-size:7.4px;font-weight:600;letter-spacing:.02em;
+    fill:var(--good);text-anchor:middle;opacity:0;pointer-events:none;
+  }
+  .pin.rated .scorebadge{opacity:1}
 
   .home circle{fill:none;stroke:var(--home);stroke-width:1.1}
   .home .core{fill:var(--home);stroke:none}
@@ -127,6 +170,14 @@
   .rose{fill:none;stroke:var(--ink-faint);stroke-width:.6;opacity:.35}
   .roselabel{font-family:var(--disp);font-size:9px;letter-spacing:.2em;fill:var(--ink-faint);text-anchor:middle;opacity:.6}
 
+  /* ---------- map legend ---------- */
+  .legend{
+    display:flex;flex-wrap:wrap;gap:16px;padding:9px 12px;border:1px solid var(--line);
+    border-top:0;font-size:11.5px;color:var(--ink-dim);align-items:center;
+  }
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend .k{width:11px;height:11px;flex:none;display:inline-block}
+
   /* ---------- tooltip ---------- */
   .tip{
     position:absolute;pointer-events:none;background:#0A1017;border:1px solid #2B3D45;
@@ -138,7 +189,7 @@
 
   /* ---------- date card ---------- */
   .card{
-    border:1px solid var(--line);border-radius:3px;background:#0C141B;
+    border:1px solid var(--line);border-radius:3px;background:var(--surface);
     position:sticky;top:20px;overflow:hidden;
   }
   .card .band{height:4px;background:var(--ink-faint);transition:.2s}
@@ -158,14 +209,53 @@
   }
   .row .v{font-size:13.5px;line-height:1.5;color:var(--ink)}
   .budget{font-family:var(--disp);font-size:26px;font-weight:600;letter-spacing:.01em}
-  .mark{
-    width:100%;margin-top:14px;font-family:var(--disp);font-size:14px;letter-spacing:.14em;
+  .btn{
+    width:100%;margin-top:10px;font-family:var(--disp);font-size:14px;letter-spacing:.14em;
     text-transform:uppercase;background:transparent;border:1px solid var(--ink-faint);
     color:var(--ink-dim);padding:9px;border-radius:2px;cursor:pointer;transition:.16s;
   }
-  .mark:hover{color:var(--ink);border-color:var(--ink)}
-  .mark[data-on="1"]{background:#17301F;border-color:#3F7A4C;color:#9BDCA6}
+  .btn:hover{color:var(--ink);border-color:var(--ink)}
+  .btn.on{background:#17301F;border-color:#3F7A4C;color:#9BDCA6}
+  .btn.star{border-color:#7A6320;color:var(--star)}
+  .btn.star:hover{border-color:var(--star)}
+  .btn.ghost{border-color:var(--line);color:var(--ink-faint);font-size:12px;letter-spacing:.1em}
+  .btn.ghost:hover{color:var(--ink-dim);border-color:var(--ink-faint)}
   .empty{padding:30px 18px;color:var(--ink-faint);font-size:13px;line-height:1.6}
+
+  .status{
+    display:inline-flex;align-items:center;gap:6px;font-family:var(--disp);font-size:11px;
+    letter-spacing:.16em;text-transform:uppercase;padding:3px 8px 2px;border-radius:2px;margin-bottom:10px;
+  }
+  .status.picked{background:#2A2412;color:var(--star);border:1px solid #7A6320}
+  .status.ridden{background:#17301F;color:#9BDCA6;border:1px solid #3F7A4C}
+
+  /* ---------- rating ---------- */
+  .rate{border-top:1px solid var(--line);padding:12px 0 2px}
+  .rate h3{
+    font-family:var(--disp);font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--ink-faint);margin:0 0 9px;font-weight:500;
+  }
+  .rater{margin-bottom:10px}
+  .rater .lbl{
+    display:flex;justify-content:space-between;align-items:baseline;
+    font-size:11.5px;color:var(--ink-dim);margin-bottom:4px;
+  }
+  .rater .lbl b{font-family:var(--disp);font-size:15px;color:var(--ink);font-weight:600}
+  .scale{display:grid;grid-template-columns:repeat(10,1fr);gap:2px}
+  .scale button{
+    aspect-ratio:1;min-height:22px;background:#111C24;border:1px solid var(--line);
+    color:var(--ink-faint);font-family:var(--disp);font-size:11px;border-radius:2px;
+    cursor:pointer;transition:.12s;padding:0;
+  }
+  .scale button:hover{border-color:var(--ink-faint);color:var(--ink-dim)}
+  .scale button[aria-pressed="true"]{color:#0A1017;font-weight:600}
+  .leftover{display:flex;align-items:center;gap:8px;margin:12px 0 2px}
+  .leftover label{font-size:11.5px;color:var(--ink-dim);flex:1}
+  .leftover input{
+    width:96px;background:#111C24;border:1px solid var(--line);color:var(--ink);
+    padding:6px 8px;border-radius:2px;font-family:var(--body);font-size:13px;
+  }
+  .leftover input:focus{border-color:var(--ink-faint);outline:none}
 
   /* ---------- list ---------- */
   .list{margin-top:14px;border:1px solid var(--line);border-radius:3px;max-height:300px;overflow:auto}
@@ -176,9 +266,66 @@
   }
   .list button:hover{background:#111C24;color:var(--ink)}
   .list button .cd{font-family:var(--disp);font-size:12px;letter-spacing:.08em;width:30px;flex:none}
-  .list button.done .nm{text-decoration:line-through;opacity:.5}
+  .list button.ridden .nm{text-decoration:line-through;opacity:.5}
+  .list button .mk{margin-left:auto;flex:none;font-size:11px;color:var(--star)}
   .list::-webkit-scrollbar{width:6px}
   .list::-webkit-scrollbar-thumb{background:#22333B;border-radius:3px}
+
+  /* ---------- dashboard ---------- */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
+  @media (max-width:760px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  .kpi{border:1px solid var(--line);border-radius:3px;background:var(--surface);padding:14px 15px}
+  .kpi .t{
+    font-family:var(--disp);font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--ink-faint);margin:0 0 6px;
+  }
+  .kpi .n{font-family:var(--disp);font-size:34px;font-weight:600;line-height:1;letter-spacing:-.01em}
+  .kpi .n small{font-size:16px;color:var(--ink-faint);font-weight:400;letter-spacing:0}
+  .kpi .sub2{font-size:11.5px;color:var(--ink-dim);margin-top:5px}
+
+  .panel{border:1px solid var(--line);border-radius:3px;background:var(--surface);margin-bottom:22px}
+  .panel > h2{
+    font-family:var(--disp);font-size:14px;letter-spacing:.2em;text-transform:uppercase;
+    margin:0;padding:13px 16px;border-bottom:1px solid var(--line);color:var(--ink);font-weight:600;
+  }
+  .panel .pad{padding:16px}
+  .panel .note{padding:0 16px 16px;color:var(--ink-faint);font-size:12px;line-height:1.6;margin:0}
+
+  /* direction progress bars */
+  .bars{display:flex;flex-direction:column;gap:12px}
+  .bar .lbl{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;font-size:12.5px}
+  .bar .lbl .nm{color:var(--ink)}
+  .bar .lbl .v{color:var(--ink-dim);font-family:var(--disp);font-size:13px;letter-spacing:.06em}
+  .bar .track{height:9px;background:#111C24;border-radius:2px;overflow:hidden;display:flex;gap:2px}
+  .bar .fill{height:100%;border-radius:0 2px 2px 0;transition:width .3s}
+  .bar .fill:first-child{border-radius:2px}
+
+  /* tables */
+  .twrap{overflow-x:auto}
+  table{border-collapse:collapse;width:100%;font-size:12.5px;min-width:660px}
+  thead th{
+    font-family:var(--disp);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--ink-faint);text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);
+    font-weight:500;white-space:nowrap;
+  }
+  tbody td{padding:10px 12px;border-bottom:1px solid var(--line);color:var(--ink-dim);vertical-align:middle}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr:hover td{background:#111C24}
+  td.nm{color:var(--ink)}
+  td.num{text-align:right;font-family:var(--disp);font-size:14px;letter-spacing:.02em;white-space:nowrap}
+  .cd2{font-family:var(--disp);font-size:12px;letter-spacing:.08em;font-weight:600}
+  .rank{font-family:var(--disp);font-size:16px;font-weight:600;color:var(--ink-faint);width:34px}
+  .rank.top{color:var(--star)}
+  .scorebar{display:flex;align-items:center;gap:9px;min-width:132px}
+  .scorebar .track{flex:1;height:7px;background:#111C24;border-radius:2px;overflow:hidden}
+  .scorebar .fill{height:100%;border-radius:2px}
+  .scorebar b{font-family:var(--disp);font-size:15px;font-weight:600;color:var(--ink);width:30px;text-align:right}
+  .mini{font-size:11px;color:var(--ink-faint);white-space:nowrap}
+  .blank{padding:34px 16px;color:var(--ink-faint);font-size:13px;line-height:1.7;text-align:center}
+  .blank b{color:var(--ink-dim);font-weight:500}
+
+  .dactions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .dactions .btn{width:auto;margin:0;padding:8px 14px}
 
   footer{margin-top:26px;border-top:1px solid var(--line);padding-top:14px;
     color:var(--ink-faint);font-size:12px;line-height:1.7}
@@ -195,48 +342,96 @@
 <header>
   <p class="eyebrow">Backride Dates</p>
   <h1>The Luzon Map <em>/ 100 Dates</em></h1>
-  <p class="sub">Every destination within a day's ride of Camarin, North Caloocan. Tap a pin for its Date Card. Spin the map to let it pick for you.</p>
+  <p class="sub">Every destination within a day's ride of Camarin, North Caloocan. Tap a pin for its Date Card, add it to the challenge, then rate it after the ride.</p>
 </header>
 
-<div class="controls">
-  <button class="chip" data-dir="ALL" aria-pressed="true">All <span class="ct">100</span></button>
-  <button class="chip" data-dir="N" aria-pressed="false"><span class="dot"></span>North <span class="ct">28</span></button>
-  <button class="chip" data-dir="W" aria-pressed="false"><span class="dot"></span>West <span class="ct">22</span></button>
-  <button class="chip" data-dir="E" aria-pressed="false"><span class="dot"></span>East <span class="ct">25</span></button>
-  <button class="chip" data-dir="S" aria-pressed="false"><span class="dot"></span>South <span class="ct">25</span></button>
-  <span class="spacer"></span>
-  <span class="tally"><b id="tallyN">0</b> / 100 ridden</span>
-  <button class="spin" id="spin">Spin the map</button>
+<div class="tabs" role="tablist">
+  <button class="tab" id="tabMap" role="tab" aria-selected="true" aria-controls="viewMap">Map</button>
+  <button class="tab" id="tabDash" role="tab" aria-selected="false" aria-controls="viewDash">Scoreboard <span class="badge" id="dashBadge"></span></button>
 </div>
 
-<div class="grid">
-  <div>
-    <div class="mapbox" id="mapbox">
-      <svg id="map" viewBox="0 0 600 700" role="img" aria-label="Map of Luzon with 100 ride destinations">
-        <defs>
-          <linearGradient id="landfill" x1="0" y1="0" x2="0.4" y2="1">
-            <stop offset="0" stop-color="#26393C"/>
-            <stop offset="1" stop-color="#16232A"/>
-          </linearGradient>
-        </defs>
-        <g id="grat"></g>
-        <path id="coast" class="coast"></path>
-        <path id="laguna" class="lake"></path>
-        <ellipse id="taal" class="lake"></ellipse>
-        <g id="rose"></g>
-        <g id="pins"></g>
-        <g id="homeg" class="home"></g>
-      </svg>
-      <div class="tip" id="tip"></div>
-    </div>
-    <div class="list" id="list"></div>
+<!-- ============ MAP VIEW ============ -->
+<div class="view" id="viewMap" role="tabpanel" aria-labelledby="tabMap">
+  <div class="controls">
+    <button class="chip" data-dir="ALL" aria-pressed="true">All <span class="ct">100</span></button>
+    <button class="chip" data-dir="N" aria-pressed="false"><span class="dot"></span>North <span class="ct">28</span></button>
+    <button class="chip" data-dir="W" aria-pressed="false"><span class="dot"></span>West <span class="ct">22</span></button>
+    <button class="chip" data-dir="E" aria-pressed="false"><span class="dot"></span>East <span class="ct">25</span></button>
+    <button class="chip" data-dir="S" aria-pressed="false"><span class="dot"></span>South <span class="ct">25</span></button>
+    <span class="spacer"></span>
+    <span class="tally"><b id="tallyN">0</b> / 100 ridden</span>
+    <button class="spin" id="spin">Spin the map</button>
   </div>
 
-  <div class="card" id="card">
-    <div class="band" id="band"></div>
-    <div class="inner" id="cardInner">
-      <div class="empty">No destination selected.<br><br>Pick a pin on the map, choose from the list, or hit <b style="color:var(--ink-dim)">Spin the map</b> and let it decide your month.</div>
+  <div class="grid">
+    <div>
+      <div class="mapbox" id="mapbox">
+        <svg id="map" viewBox="0 0 600 700" role="img" aria-label="Map of Luzon with 100 ride destinations">
+          <defs>
+            <linearGradient id="landfill" x1="0" y1="0" x2="0.4" y2="1">
+              <stop offset="0" stop-color="#26393C"/>
+              <stop offset="1" stop-color="#16232A"/>
+            </linearGradient>
+          </defs>
+          <g id="grat"></g>
+          <path id="coast" class="coast"></path>
+          <path id="laguna" class="lake"></path>
+          <ellipse id="taal" class="lake"></ellipse>
+          <g id="rose"></g>
+          <g id="pins"></g>
+          <g id="homeg" class="home"></g>
+        </svg>
+        <div class="tip" id="tip"></div>
+      </div>
+      <div class="legend">
+        <span><svg class="k" viewBox="-8 -20 16 22"><path d="M0,0 c-4.6,-5.9 -6.8,-9.2 -6.8,-12.5 a6.8,6.8 0 1,1 13.6,0 c0,3.3 -2.2,6.6 -6.8,12.5 z" fill="#7E9198"/></svg> Not yet picked</span>
+        <span><svg class="k" viewBox="-8 -20 16 22"><path d="M0,0 c-4.6,-5.9 -6.8,-9.2 -6.8,-12.5 a6.8,6.8 0 1,1 13.6,0 c0,3.3 -2.2,6.6 -6.8,12.5 z" fill="#7E9198" stroke="#FFD666" stroke-width="1.2"/><path transform="translate(0,-12.5) scale(.8)" d="M0,-4.6 L1.15,-1.58 L4.38,-1.42 L1.86,.6 L2.7,3.72 L0,1.95 L-2.7,3.72 L-1.86,.6 L-4.38,-1.42 L-1.15,-1.58 Z" fill="#FFD666"/></svg> Picked for a challenge</span>
+        <span><svg class="k" viewBox="-8 -20 16 22"><path d="M0,0 c-4.6,-5.9 -6.8,-9.2 -6.8,-12.5 a6.8,6.8 0 1,1 13.6,0 c0,3.3 -2.2,6.6 -6.8,12.5 z" fill="#3C4C52"/><circle cx="0" cy="-12.5" r="2.5" fill="#7CC47F"/></svg> Ridden</span>
+      </div>
+      <div class="list" id="list"></div>
     </div>
+
+    <div class="card" id="card">
+      <div class="band" id="band"></div>
+      <div class="inner" id="cardInner">
+        <div class="empty">No destination selected.<br><br>Pick a pin on the map, choose from the list, or hit <b style="color:var(--ink-dim)">Spin the map</b> and let it decide your month.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ DASHBOARD VIEW ============ -->
+<div class="view" id="viewDash" role="tabpanel" aria-labelledby="tabDash" hidden>
+  <div class="kpis" id="kpis"></div>
+
+  <div class="panel">
+    <h2>Progress by direction</h2>
+    <div class="pad"><div class="bars" id="dirBars"></div></div>
+    <p class="note">Solid bar is ridden, lighter segment is picked and still ahead of you.</p>
+  </div>
+
+  <div class="panel">
+    <h2>Episode log</h2>
+    <div class="twrap" id="logTable"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Ranking</h2>
+    <div class="twrap" id="rankTable"></div>
+    <p class="note">Ranked on the average of all three scores, so one loud opinion cannot carry a destination. Only rated destinations appear here.</p>
+  </div>
+
+  <div class="panel">
+    <h2>Your data</h2>
+    <div class="pad">
+      <div class="dactions">
+        <button class="btn" id="exportBtn">Export JSON</button>
+        <button class="btn" id="importBtn">Import JSON</button>
+        <input type="file" id="importFile" accept="application/json,.json" hidden>
+        <button class="btn ghost" id="resetBtn">Reset everything</button>
+      </div>
+    </div>
+    <p class="note">Progress is saved in this browser only — it does not sync between your phone and hers. Export after an episode and import on the other device to keep both in step.</p>
   </div>
 </div>
 
@@ -248,11 +443,12 @@
 
 <script>
 const DIRS = {
-  N:{name:"North", color:"#F0B429", blurb:"Bulacan, Nueva Ecija, Tarlac, Pampanga, Pangasinan"},
-  W:{name:"West",  color:"#46A8C4", blurb:"Bataan, Zambales, Subic"},
-  E:{name:"East",  color:"#7CC47F", blurb:"Rizal, Quezon, Marilaque"},
-  S:{name:"South", color:"#C98BDB", blurb:"Cavite, Batangas, Laguna, south Quezon"}
+  N:{name:"North", color:"#F0B429", chart:"#B8840D", blurb:"Bulacan, Nueva Ecija, Tarlac, Pampanga, Pangasinan"},
+  W:{name:"West",  color:"#46A8C4", chart:"#1E8CAE", blurb:"Bataan, Zambales, Subic"},
+  E:{name:"East",  color:"#7CC47F", chart:"#4E9E58", blurb:"Rizal, Quezon, Marilaque"},
+  S:{name:"South", color:"#C98BDB", chart:"#A863C4", blurb:"Cavite, Batangas, Laguna, south Quezon"}
 };
+const RATERS = [["his","His score"],["her","Her score"],["viewer","Viewer score"]];
 
 // code, name, activity, ride, budget, lon, lat
 const P = [
@@ -361,6 +557,9 @@ const P = [
 ["S25","Atimonan Zigzag Road","Ride the Bitukang Manok through the national park","4h",3000,121.92,14.00]
 ];
 
+const BY_CODE = {};
+P.forEach((d,i)=>{ BY_CODE[d[0]] = i; });
+
 // ---------- projection ----------
 const LON0=119.62, LON1=122.36, LAT0=13.42, LAT1=16.60, W=600, H=700;
 const px = lon => (lon-LON0)/(LON1-LON0)*W;
@@ -417,6 +616,7 @@ document.getElementById("homeg").innerHTML=`
 
 // ---------- pins ----------
 const PIN="M0,0 c-4.6,-5.9 -6.8,-9.2 -6.8,-12.5 a6.8,6.8 0 1,1 13.6,0 c0,3.3 -2.2,6.6 -6.8,12.5 z";
+const STAR="M0,-4.6 L1.15,-1.58 L4.38,-1.42 L1.86,.6 L2.7,3.72 L0,1.95 L-2.7,3.72 L-1.86,.6 L-4.38,-1.42 L-1.15,-1.58 Z";
 const pinsG=document.getElementById("pins");
 const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 let html="";
@@ -424,21 +624,55 @@ P.forEach((d,i)=>{
   const [code,name,act,ride,bud,lon,lat]=d;
   const dir=code[0], c=DIRS[dir].color;
   const x=px(lon), y=py(lat);
-  html+=`<g class="pin${reduce?"":" drop"}" data-i="${i}" data-dir="${dir}" tabindex="0" role="button"
-           aria-label="${name}" transform="translate(${x.toFixed(1)},${y.toFixed(1)})"
-           style="animation-delay:${(i*11)}ms">
-    <circle class="halo" r="13" fill="${c}"/>
-    <path class="body" d="${PIN}" fill="${c}"/>
-    <circle class="eye" cx="0" cy="-12.5" r="2.5"/>
-    <text class="code" y="8.5">${code}</text>
+  // The position lives on an OUTER group. The drop animation sets a CSS
+  // `transform`, which overrides an SVG transform attribute on the same
+  // element — putting both on one <g> collapses every pin onto the origin.
+  html+=`<g class="pinpos" transform="translate(${x.toFixed(1)},${y.toFixed(1)})">
+    <g class="pin${reduce?"":" drop"}" data-i="${i}" data-dir="${dir}"
+       data-x="${x.toFixed(1)}" data-y="${y.toFixed(1)}" tabindex="0" role="button"
+       aria-label="${name}" style="animation-delay:${(i*11)}ms">
+      <circle class="halo" r="13" fill="${c}"/>
+      <circle class="ring" r="11.4" stroke-dasharray="3.4 2.6"/>
+      <path class="body" d="${PIN}" fill="${c}"/>
+      <circle class="eye" cx="0" cy="-12.5" r="2.5"/>
+      <path class="star" transform="translate(0,-12.5)" d="${STAR}"/>
+      <text class="scorebadge" y="-22">0</text>
+      <text class="code" y="8.5">${code}</text>
+    </g>
   </g>`;
 });
 pinsG.innerHTML=html;
 
 // ---------- state ----------
-let filter="ALL", sel=null, done=new Set();
+const KEY="backride:log:v2", OLDKEY="backride:done";
+let filter="ALL", sel=null, view="map";
+// log: code -> {status:"picked"|"ridden", ep, month, leftover, his, her, viewer}
+let log={};
 
-const tip=document.getElementById("tip"), mapbox=document.getElementById("mapbox");
+function entry(code){ return log[code] || null; }
+function statusOf(code){ const e=entry(code); return e ? e.status : null; }
+function avgOf(e){
+  if(!e) return null;
+  const v=RATERS.map(([k])=>e[k]).filter(n=>typeof n==="number");
+  if(!v.length) return null;
+  return v.reduce((a,b)=>a+b,0)/v.length;
+}
+function nextEp(){
+  const eps=Object.values(log).map(e=>e.ep).filter(n=>typeof n==="number");
+  return eps.length ? Math.max(...eps)+1 : 1;
+}
+function thisMonth(){
+  const d=new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+}
+function monthLabel(m){
+  if(!m) return "—";
+  const [y,mo]=m.split("-").map(Number);
+  if(!y||!mo) return m;
+  return new Date(y,mo-1,1).toLocaleDateString(undefined,{month:"short",year:"numeric"});
+}
+
+const tip=document.getElementById("tip");
 const svg=document.getElementById("map");
 
 function svgToBox(x,y){
@@ -446,46 +680,193 @@ function svgToBox(x,y){
   return [r.width*x/W, r.height*y/H];
 }
 
+// ---------- render ----------
 function render(){
   document.querySelectorAll(".pin").forEach(el=>{
-    const i=+el.dataset.i;
+    const i=+el.dataset.i, code=P[i][0], st=statusOf(code), e=entry(code);
     el.classList.toggle("dim", filter!=="ALL" && el.dataset.dir!==filter);
     el.classList.toggle("sel", sel===i);
-    el.classList.toggle("done", done.has(P[i][0]));
+    el.classList.toggle("picked", st==="picked");
+    el.classList.toggle("ridden", st==="ridden");
+    const a=avgOf(e);
+    el.classList.toggle("rated", a!==null);
+    if(a!==null) el.querySelector(".scorebadge").textContent=a.toFixed(1);
   });
   svg.parentElement.classList.toggle("showcodes", filter!=="ALL");
   document.querySelectorAll(".chip").forEach(b=>b.setAttribute("aria-pressed", b.dataset.dir===filter));
-  document.getElementById("tallyN").textContent=done.size;
+
+  const ridden=Object.values(log).filter(e=>e.status==="ridden").length;
+  const picked=Object.values(log).filter(e=>e.status==="picked").length;
+  document.getElementById("tallyN").textContent=ridden;
+  document.getElementById("dashBadge").textContent = (ridden+picked) ? `${ridden}/${ridden+picked}` : "";
+
   renderList();
   renderCard();
+  if(view==="dash") renderDash();
 }
 
 function renderList(){
   const rows=P.map((d,i)=>[d,i]).filter(([d])=>filter==="ALL"||d[0][0]===filter);
-  document.getElementById("list").innerHTML=rows.map(([d,i])=>
-    `<button data-i="${i}" class="${done.has(d[0])?"done":""}">
+  document.getElementById("list").innerHTML=rows.map(([d,i])=>{
+    const st=statusOf(d[0]);
+    const mark = st==="picked" ? "★" : st==="ridden" ? "<span style='color:var(--good)'>✓</span>" : "";
+    return `<button data-i="${i}" class="${st||""}">
        <span class="cd" style="color:${DIRS[d[0][0]].color}">${d[0]}</span>
        <span class="nm">${d[1]}</span>
-     </button>`).join("");
+       <span class="mk">${mark}</span>
+     </button>`;
+  }).join("");
 }
 
 function renderCard(){
   const band=document.getElementById("band"), inner=document.getElementById("cardInner");
   if(sel===null){ band.style.background="var(--ink-faint)"; return; }
-  const [code,name,act,ride,bud,lon,lat]=P[sel];
-  const dir=code[0], c=DIRS[dir].color, isDone=done.has(code);
+  const [code,name,act,ride,bud]=P[sel];
+  const dir=code[0], c=DIRS[dir].color, e=entry(code), st=statusOf(code);
   band.style.background=c;
+
+  let badge="";
+  if(st==="picked") badge=`<div class="status picked">★ Picked · Ep ${e.ep??"—"} · ${monthLabel(e.month)}</div>`;
+  if(st==="ridden") badge=`<div class="status ridden">✓ Ridden · Ep ${e.ep??"—"} · ${monthLabel(e.month)}</div>`;
+
+  let actions="";
+  if(!st){
+    actions=`<button class="btn star" data-act="pick">★ Add to challenge</button>`;
+  }else if(st==="picked"){
+    actions=`<button class="btn" data-act="ride">Mark as ridden</button>
+             <button class="btn ghost" data-act="unpick">Remove from challenge</button>`;
+  }else{
+    actions=`<button class="btn ghost" data-act="unride">Move back to picked</button>`;
+  }
+
+  let rating="";
+  if(st==="ridden"){
+    const a=avgOf(e);
+    rating=`<div class="rate">
+      <h3>Rate this date${a!==null?` · average ${a.toFixed(1)}`:""}</h3>
+      ${RATERS.map(([k,lab])=>`
+        <div class="rater">
+          <div class="lbl"><span>${lab}</span><b>${typeof e[k]==="number"?e[k]:"—"}</b></div>
+          <div class="scale" data-rater="${k}">
+            ${Array.from({length:10},(_,n)=>{
+              const v=n+1, on=e[k]===v;
+              return `<button type="button" data-v="${v}" aria-pressed="${on}" aria-label="${lab} ${v} of 10"
+                        style="${on?`background:${c};border-color:${c}`:""}">${v}</button>`;
+            }).join("")}
+          </div>
+        </div>`).join("")}
+      <div class="leftover">
+        <label for="lo">Left in the envelope</label>
+        <input id="lo" type="number" min="0" max="${bud}" step="10" placeholder="₱0"
+               value="${typeof e.leftover==="number"?e.leftover:""}">
+      </div>
+    </div>`;
+  }
+
   inner.innerHTML=`
+    ${badge}
     <p class="dir" style="color:${c}">${code} &nbsp;·&nbsp; ${DIRS[dir].name}</p>
     <h2>${name}</h2>
     <div class="row"><span class="k">Activity</span><span class="v">${act}</span></div>
     <div class="row"><span class="k">Ride</span><span class="v">${ride} one way from Camarin</span></div>
     <div class="row"><span class="k">Budget</span><span class="v budget" style="color:${c}">₱${bud.toLocaleString()}</span></div>
-    <button class="mark" id="markBtn" data-on="${isDone?1:0}">${isDone?"Date completed ✓":"Mark as ridden"}</button>`;
-  document.getElementById("markBtn").onclick=()=>{
-    done.has(code)?done.delete(code):done.add(code);
-    save(); render();
-  };
+    ${rating}
+    ${actions}`;
+}
+
+// ---------- dashboard ----------
+function renderDash(){
+  const all=Object.entries(log).map(([code,e])=>({code,e,d:P[BY_CODE[code]]})).filter(r=>r.d);
+  const ridden=all.filter(r=>r.e.status==="ridden");
+  const picked=all.filter(r=>r.e.status==="picked");
+  const rated=ridden.filter(r=>avgOf(r.e)!==null);
+
+  const avgAll = rated.length ? rated.reduce((s,r)=>s+avgOf(r.e),0)/rated.length : null;
+  const envelope = ridden.reduce((s,r)=>s+r.d[4],0);
+  const kept = ridden.reduce((s,r)=>s+(typeof r.e.leftover==="number"?r.e.leftover:0),0);
+
+  // --- KPI tiles ---
+  document.getElementById("kpis").innerHTML=`
+    <div class="kpi"><p class="t">Ridden</p><div class="n">${ridden.length}<small> / 100</small></div>
+      <div class="sub2">${(ridden.length/100*100).toFixed(0)}% of the map</div></div>
+    <div class="kpi"><p class="t">Picked, still ahead</p><div class="n">${picked.length}</div>
+      <div class="sub2">${picked.length?"On the wheel now":"Nothing queued"}</div></div>
+    <div class="kpi"><p class="t">Average rating</p><div class="n">${avgAll!==null?avgAll.toFixed(1):"—"}<small>${avgAll!==null?" / 10":""}</small></div>
+      <div class="sub2">${rated.length} rated</div></div>
+    <div class="kpi"><p class="t">Kept in the envelope</p><div class="n">₱${kept.toLocaleString()}</div>
+      <div class="sub2">of ₱${envelope.toLocaleString()} budgeted</div></div>`;
+
+  // --- direction progress ---
+  document.getElementById("dirBars").innerHTML=Object.entries(DIRS).map(([k,v])=>{
+    const total=P.filter(d=>d[0][0]===k).length;
+    const r=ridden.filter(x=>x.code[0]===k).length;
+    const p=picked.filter(x=>x.code[0]===k).length;
+    return `<div class="bar">
+      <div class="lbl"><span class="nm">${v.name}</span>
+        <span class="v">${r} ridden${p?` · ${p} picked`:""} <span style="color:var(--ink-faint)">/ ${total}</span></span></div>
+      <div class="track">
+        <div class="fill" style="width:${r/total*100}%;background:${v.chart}"></div>
+        <div class="fill" style="width:${p/total*100}%;background:${v.chart};opacity:.42"></div>
+      </div>
+    </div>`;
+  }).join("");
+
+  // --- episode log ---
+  const logRows=[...all].sort((a,b)=>{
+    const ea=a.e.ep??9999, eb=b.e.ep??9999;
+    return ea-eb || a.code.localeCompare(b.code);
+  });
+  document.getElementById("logTable").innerHTML = logRows.length ? `
+    <table><thead><tr>
+      <th style="text-align:right">Ep</th><th>Month</th><th>Place</th><th>Dir</th>
+      <th style="text-align:right">Budget</th><th style="text-align:right">Left</th>
+      <th style="text-align:right">His</th><th style="text-align:right">Her</th><th style="text-align:right">Viewer</th>
+      <th style="text-align:right">Avg</th>
+    </tr></thead><tbody>
+    ${logRows.map(r=>{
+      const a=avgOf(r.e), dir=r.code[0];
+      const isP=r.e.status==="picked";
+      return `<tr>
+        <td class="num">${r.e.ep??"—"}</td>
+        <td>${monthLabel(r.e.month)}</td>
+        <td class="nm"><span class="cd2" style="color:${DIRS[dir].color}">${r.code}</span> ${r.d[1]}
+          ${isP?' <span class="mini" style="color:var(--star)">★ picked</span>':""}</td>
+        <td>${DIRS[dir].name}</td>
+        <td class="num">₱${r.d[4].toLocaleString()}</td>
+        <td class="num">${typeof r.e.leftover==="number"?"₱"+r.e.leftover.toLocaleString():"—"}</td>
+        <td class="num">${r.e.his??"—"}</td>
+        <td class="num">${r.e.her??"—"}</td>
+        <td class="num">${r.e.viewer??"—"}</td>
+        <td class="num" style="color:var(--ink)">${a!==null?a.toFixed(1):"—"}</td>
+      </tr>`;
+    }).join("")}
+    </tbody></table>` :
+    `<div class="blank">No episodes logged yet.<br><br>Open the <b>Map</b>, pick a destination, and it lands here.</div>`;
+
+  // --- ranking ---
+  const ranked=[...rated].sort((a,b)=>avgOf(b.e)-avgOf(a.e) || a.d[1].localeCompare(b.d[1]));
+  document.getElementById("rankTable").innerHTML = ranked.length ? `
+    <table><thead><tr>
+      <th style="width:34px">#</th><th>Place</th><th>Dir</th>
+      <th style="min-width:150px">Average</th><th style="text-align:right">His</th>
+      <th style="text-align:right">Her</th><th style="text-align:right">Viewer</th>
+    </tr></thead><tbody>
+    ${ranked.map((r,i)=>{
+      const a=avgOf(r.e), dir=r.code[0];
+      return `<tr>
+        <td class="rank ${i===0?"top":""}">${i+1}</td>
+        <td class="nm"><span class="cd2" style="color:${DIRS[dir].color}">${r.code}</span> ${r.d[1]}</td>
+        <td>${DIRS[dir].name}</td>
+        <td><div class="scorebar">
+          <div class="track"><div class="fill" style="width:${a/10*100}%;background:${DIRS[dir].chart}"></div></div>
+          <b>${a.toFixed(1)}</b></div></td>
+        <td class="num">${r.e.his??"—"}</td>
+        <td class="num">${r.e.her??"—"}</td>
+        <td class="num">${r.e.viewer??"—"}</td>
+      </tr>`;
+    }).join("")}
+    </tbody></table>` :
+    `<div class="blank">Nothing rated yet.<br><br>Mark a picked destination as <b>ridden</b>, then score it out of 10 on the Date Card.</div>`;
 }
 
 // ---------- interactions ----------
@@ -500,10 +881,10 @@ pinsG.addEventListener("keydown", e=>{
 });
 pinsG.addEventListener("mouseover", e=>{
   const g=e.target.closest(".pin"); if(!g||g.classList.contains("dim")) return;
-  const d=P[+g.dataset.i];
-  tip.innerHTML=`<b>${d[1]}</b><span>${d[3]} · ₱${d[4].toLocaleString()}</span>`;
-  const t=g.getAttribute("transform").match(/[-\d.]+/g);
-  const [bx,by]=svgToBox(+t[0],+t[1]);
+  const d=P[+g.dataset.i], en=entry(d[0]), a=avgOf(en);
+  const extra = a!==null ? ` · ★ ${a.toFixed(1)}` : statusOf(d[0])==="picked" ? " · ★ picked" : "";
+  tip.innerHTML=`<b>${d[1]}</b><span>${d[3]} · ₱${d[4].toLocaleString()}${extra}</span>`;
+  const [bx,by]=svgToBox(+g.dataset.x, +g.dataset.y);
   tip.style.left=bx+"px"; tip.style.top=by+"px"; tip.style.opacity=1;
 });
 pinsG.addEventListener("mouseout", ()=>tip.style.opacity=0);
@@ -518,10 +899,41 @@ document.querySelectorAll(".chip").forEach(b=>{
   b.onclick=()=>{ filter=b.dataset.dir; sel=null; render(); };
 });
 
+// card actions (pick / ride / ratings / leftover)
+document.getElementById("cardInner").addEventListener("click", e=>{
+  if(sel===null) return;
+  const code=P[sel][0];
+
+  const actBtn=e.target.closest("[data-act]");
+  if(actBtn){
+    const act=actBtn.dataset.act;
+    if(act==="pick")   log[code]={status:"picked", ep:nextEp(), month:thisMonth()};
+    if(act==="unpick") delete log[code];
+    if(act==="ride")   log[code]={...log[code], status:"ridden"};
+    if(act==="unride") log[code]={...log[code], status:"picked"};
+    save(); render(); return;
+  }
+
+  const scaleBtn=e.target.closest(".scale button");
+  if(scaleBtn){
+    const k=scaleBtn.closest(".scale").dataset.rater, v=+scaleBtn.dataset.v;
+    const cur=log[code]||{};
+    log[code]={...cur, [k]: cur[k]===v ? undefined : v};
+    if(log[code][k]===undefined) delete log[code][k];
+    save(); render();
+  }
+});
+document.getElementById("cardInner").addEventListener("change", e=>{
+  if(sel===null || e.target.id!=="lo") return;
+  const code=P[sel][0], raw=e.target.value.trim();
+  const cur=log[code]||{};
+  if(raw===""){ delete cur.leftover; } else { cur.leftover=Math.max(0, Math.round(+raw)||0); }
+  log[code]=cur; save(); render();
+});
+
 document.getElementById("spin").onclick=()=>{
-  const pool=P.map((d,i)=>i)
-    .filter(i=>(filter==="ALL"||P[i][0][0]===filter) && !done.has(P[i][0]));
-  if(!pool.length){ alert("Every destination in this filter is already ridden. Switch direction or reset a pin."); return; }
+  const pool=P.map((d,i)=>i).filter(i=>(filter==="ALL"||P[i][0][0]===filter) && !statusOf(P[i][0]));
+  if(!pool.length){ alert("Everything in this filter is already picked or ridden. Switch direction, or clear one from the Scoreboard."); return; }
   let n=0;
   const tick=()=>{
     sel=pool[Math.floor(Math.random()*pool.length)];
@@ -531,15 +943,68 @@ document.getElementById("spin").onclick=()=>{
   tick();
 };
 
+// tabs
+function setView(v){
+  view=v;
+  document.getElementById("viewMap").hidden = v!=="map";
+  document.getElementById("viewDash").hidden = v!=="dash";
+  document.getElementById("tabMap").setAttribute("aria-selected", v==="map");
+  document.getElementById("tabDash").setAttribute("aria-selected", v==="dash");
+  if(v==="dash") renderDash();
+}
+document.getElementById("tabMap").onclick=()=>setView("map");
+document.getElementById("tabDash").onclick=()=>setView("dash");
+
+// export / import / reset
+document.getElementById("exportBtn").onclick=()=>{
+  const blob=new Blob([JSON.stringify({version:2, exported:new Date().toISOString(), log}, null, 2)],
+                      {type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download=`backride-dates-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+};
+document.getElementById("importBtn").onclick=()=>document.getElementById("importFile").click();
+document.getElementById("importFile").onchange=async e=>{
+  const f=e.target.files&&e.target.files[0]; if(!f) return;
+  try{
+    const data=JSON.parse(await f.text());
+    const incoming=data && data.log;
+    if(!incoming || typeof incoming!=="object") throw new Error("no log");
+    const known=Object.keys(incoming).filter(c=>c in BY_CODE);
+    if(!known.length) throw new Error("nothing recognisable");
+    if(!confirm(`Import ${known.length} destination${known.length>1?"s":""}? This replaces what is in this browser.`)) return;
+    log={}; known.forEach(c=>{ log[c]=incoming[c]; });
+    save(); render();
+  }catch(err){
+    alert("That file could not be read as a Backride Dates export.");
+  }finally{ e.target.value=""; }
+};
+document.getElementById("resetBtn").onclick=()=>{
+  if(!confirm("Clear every pick, ride and rating in this browser? This cannot be undone.")) return;
+  log={}; save(); render();
+};
+
 // ---------- persistence ----------
 function save(){
-  try{ localStorage.setItem("backride:done", JSON.stringify([...done])); }catch(e){}
+  try{ localStorage.setItem(KEY, JSON.stringify(log)); }catch(e){}
 }
 function load(){
   try{
-    const raw=localStorage.getItem("backride:done");
-    if(raw) done=new Set(JSON.parse(raw));
-  }catch(e){}
+    const raw=localStorage.getItem(KEY);
+    if(raw){
+      log=JSON.parse(raw)||{};
+    }else{
+      // migrate the old "done" list into the new log
+      const old=localStorage.getItem(OLDKEY);
+      if(old){
+        const codes=JSON.parse(old)||[];
+        codes.forEach((c,i)=>{ if(c in BY_CODE) log[c]={status:"ridden", ep:i+1}; });
+        save();
+      }
+    }
+  }catch(e){ log={}; }
   render();
 }
 load();

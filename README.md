@@ -24,10 +24,30 @@ Destinations are grouped into four directions radiating from home base:
 ### Features
 
 - **Filter by direction** — chips at the top narrow the map and list to one region.
-- **Spin the map** — randomly picks a destination from the current filter (skipping ones already ridden), for when you want the map to decide.
+- **Spin the map** — randomly picks a destination from the current filter (skipping anything already picked or ridden), for when you want the map to decide.
 - **Date Card** — click any pin or list row to open its card: activity, ride time, and budget.
-- **Progress tracking** — mark a destination as ridden; progress is saved locally in the browser (`localStorage`) and reflected in the "X / 100 ridden" tally and the pin styling.
+- **Challenge pins** — add a destination to the challenge and its pin changes to a starred, ringed marker so the queue is readable at a glance on the map. Once ridden it turns muted with a green tick, and carries its score as a badge.
+- **Rating** — score a ridden date out of 10 three ways (his, her, viewer) and log what was left in the envelope.
+- **Scoreboard tab** — KPI tiles, progress by direction, the episode log, and a ranking table sorted on the average of all three scores.
+- **Export / import** — progress lives in `localStorage`, which is per-browser. Export to JSON after an episode and import on the other device to keep both phones in step.
 - **Keyboard + screen reader friendly** — pins are focusable and operable via keyboard, with `aria-label`s and `prefers-reduced-motion` support.
+
+### Pin states
+
+| Pin | Meaning |
+|---|---|
+| Solid colour, direction-coded | Not yet picked |
+| Starred with a dashed ring | Picked for a challenge |
+| Muted grey with a green tick | Ridden (score badge above it once rated) |
+
+### Two implementation notes
+
+- **Pin positioning uses a wrapper group.** Each pin is `<g class="pinpos" transform="translate(x,y)"><g class="pin drop">…</g></g>`. The drop-in animation sets a CSS `transform`, and a CSS transform overrides an SVG `transform` presentation attribute on the *same* element — putting both on one `<g>` silently collapses all 100 pins onto the map's origin once the animation finishes.
+- **The pin halo is `pointer-events:none`.** It is a 13px circle at `opacity:0`; left interactive, it swallows clicks aimed at neighbouring pins in the dense Rizal and Laguna clusters.
+
+### Chart colours
+
+The dashboard reuses the four direction hues, but stepped darker for chart marks (`--n-chart` etc.). The map's pin colours sit above the OKLCH dark-mode lightness band and the cyan falls under the chroma floor, so the bar fills use validated steps in the same hue families — identity still reads across map and dashboard, and adjacent pairs stay separable under protanopia and deuteranopia.
 
 ## Tech
 
