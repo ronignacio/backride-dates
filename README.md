@@ -24,7 +24,7 @@ Destinations are grouped into four directions radiating from home base:
 ### Features
 
 - **Filter by direction** — chips at the top narrow the map and list to one region.
-- **Spin the map** — randomly picks a destination from the current filter (skipping anything already picked or ridden), for when you want the map to decide.
+- **Spin the map** — randomly picks a destination from the current filter (skipping anything already picked or ridden), for when you want the map to decide. The button shuffles across the whole map, then the camera flies in and frames the winner: every other pin recedes, and the result gets a pulsing white ping. A **Zoom out** button returns to the full extent.
 - **Date Card** — click any pin or list row to open its card: activity, ride time, and budget.
 - **Challenge pins** — add a destination to the challenge and its pin changes to a starred, ringed marker so the queue is readable at a glance on the map. Once ridden it turns muted with a green tick, and carries its score as a badge.
 - **Rating** — score a ridden date out of 10 three ways (his, her, viewer) and log what was left in the envelope.
@@ -44,6 +44,11 @@ Destinations are grouped into four directions radiating from home base:
 
 - **Pin positioning uses a wrapper group.** Each pin is `<g class="pinpos" transform="translate(x,y)"><g class="pin drop">…</g></g>`. The drop-in animation sets a CSS `transform`, and a CSS transform overrides an SVG `transform` presentation attribute on the *same* element — putting both on one `<g>` silently collapses all 100 pins onto the map's origin once the animation finishes.
 - **The pin halo is `pointer-events:none`.** It is a 13px circle at `opacity:0`; left interactive, it swallows clicks aimed at neighbouring pins in the dense Rizal and Laguna clusters.
+- **The drop-in animation uses `backwards`, never `both`.** A retained final keyframe holds `opacity: 1` at animation precedence, which silently defeats every later opacity rule — both the direction filter's `.dim` and the post-spin spotlight. The class lands on the element and nothing visibly changes.
+
+### Typography
+
+The page title uses **Rubik Bubbles** (a rounded groovy display face); the rest of the interface stays on Barlow Condensed so the map furniture keeps its editorial tone. Swapping the title face means changing `--fun` and the Google Fonts URL together.
 
 ### Chart colours
 

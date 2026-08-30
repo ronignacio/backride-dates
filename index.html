@@ -7,7 +7,7 @@
 <meta name="description" content="Backride Dates: 100 motorcycle date destinations within a day's ride of Camarin, North Caloocan, plotted on an interactive map of Luzon — with a challenge tracker and rating scoreboard.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Rubik+Bubbles&display=swap" rel="stylesheet">
 <style>
   :root{
     --sea:#080D14;
@@ -32,6 +32,8 @@
     --star:#FFD666;
     --good:#7CC47F;
     --disp:"Barlow Condensed", "Oswald", "Haettenschweiler", Impact, sans-serif;
+    /* Groovy bubble face, page title only — the UI stays on Barlow Condensed. */
+    --fun:"Rubik Bubbles", "Baloo 2", "Chewy", "Comic Sans MS", system-ui, sans-serif;
     --body:"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
   *{box-sizing:border-box}
@@ -55,8 +57,8 @@
   }
   .eyebrow::after{content:"";flex:1;height:1px;background:var(--line)}
   h1{
-    font-family:var(--disp);font-weight:700;font-size:clamp(38px,7vw,62px);
-    line-height:.94;letter-spacing:-.01em;margin:0 0 8px;text-transform:uppercase;
+    font-family:var(--fun);font-weight:400;font-size:clamp(34px,6.4vw,58px);
+    line-height:1.04;letter-spacing:.005em;margin:0 0 10px;text-transform:uppercase;
   }
   h1 em{font-style:normal;color:var(--ink-faint)}
   .sub{margin:0;color:var(--ink-dim);font-size:14px;max-width:56ch;line-height:1.55}
@@ -99,6 +101,9 @@
   }
   .spin:hover{background:#fff;transform:translateY(-1px)}
   .spin:active{transform:translateY(0)}
+  .spin:disabled{opacity:.55;cursor:default;transform:none;background:var(--ink-faint)}
+  .spin.alt{background:transparent;color:var(--ink-dim);border:1px solid var(--ink-faint)}
+  .spin.alt:hover{background:transparent;color:var(--ink);border-color:var(--ink)}
   .tally{font-family:var(--disp);font-size:14px;letter-spacing:.12em;color:var(--ink-faint);text-transform:uppercase}
   .tally b{color:var(--ink);font-weight:600}
 
@@ -124,7 +129,16 @@
      swallows clicks aimed at a neighbour in the dense Rizal/Laguna clusters. */
   .pin .halo{opacity:0;transition:.2s;pointer-events:none}
   .pin:hover .halo{opacity:.28}
-  .pin.sel .halo{opacity:.4}
+  .pin.sel .halo{opacity:.55}
+
+  /* Selected pin: a radar ping so the spin result is unmissable. */
+  .pin .focus{opacity:0;fill:none;stroke:#fff;stroke-width:1.3;pointer-events:none}
+  .pin.sel .focus{opacity:1;animation:focusPulse 1.5s ease-out infinite}
+  @keyframes focusPulse{0%{r:8;opacity:.85}100%{r:26;opacity:0}}
+
+  /* Spotlight: after a spin, everything but the result recedes. */
+  .mapbox.spotlight .pin:not(.sel){opacity:.12}
+  .mapbox.spotlight .pin:not(.sel) .code{opacity:0}
   .pin.dim{opacity:.13;pointer-events:none}
   .pin .code{
     font-family:var(--disp);font-size:6.4px;letter-spacing:.06em;fill:var(--ink-dim);
@@ -164,7 +178,10 @@
     100%{r:26;opacity:0}
   }
 
-  .drop{animation:drop .5s cubic-bezier(.2,.9,.3,1.3) both}
+  /* `backwards`, never `both`: a retained final keyframe pins opacity at 1 at
+     animation precedence, which silently defeats every later opacity rule
+     (the direction filter's .dim and the post-spin spotlight). */
+  .drop{animation:drop .5s cubic-bezier(.2,.9,.3,1.3) backwards}
   @keyframes drop{from{opacity:0;transform:translateY(-14px) scale(.6)}to{opacity:1;transform:translateY(0) scale(1)}}
 
   .rose{fill:none;stroke:var(--ink-faint);stroke-width:.6;opacity:.35}
@@ -360,6 +377,7 @@
     <button class="chip" data-dir="S" aria-pressed="false"><span class="dot"></span>South <span class="ct">25</span></button>
     <span class="spacer"></span>
     <span class="tally"><b id="tallyN">0</b> / 100 ridden</span>
+    <button class="spin alt" id="zoomOut" hidden>Zoom out</button>
     <button class="spin" id="spin">Spin the map</button>
   </div>
 
@@ -632,6 +650,7 @@ P.forEach((d,i)=>{
        data-x="${x.toFixed(1)}" data-y="${y.toFixed(1)}" tabindex="0" role="button"
        aria-label="${name}" style="animation-delay:${(i*11)}ms">
       <circle class="halo" r="13" fill="${c}"/>
+      <circle class="focus" r="8"/>
       <circle class="ring" r="11.4" stroke-dasharray="3.4 2.6"/>
       <path class="body" d="${PIN}" fill="${c}"/>
       <circle class="eye" cx="0" cy="-12.5" r="2.5"/>
@@ -675,9 +694,55 @@ function monthLabel(m){
 const tip=document.getElementById("tip");
 const svg=document.getElementById("map");
 
+// ---------- camera ----------
+const FULL={x:0,y:0,w:W,h:H};
+let vb={...FULL}, vbRaf=null, spotlight=false, spinning=false;
+
+// Tooltip placement has to follow the camera, not the full extent.
 function svgToBox(x,y){
   const r=svg.getBoundingClientRect();
-  return [r.width*x/W, r.height*y/H];
+  return [ (x-vb.x)/vb.w*r.width, (y-vb.y)/vb.h*r.height ];
+}
+
+function setViewBox(v){
+  vb=v;
+  svg.setAttribute("viewBox", `${v.x.toFixed(2)} ${v.y.toFixed(2)} ${v.w.toFixed(2)} ${v.h.toFixed(2)}`);
+}
+function isZoomed(){ return vb.w < W-1; }
+function updateZoomUI(){
+  document.getElementById("zoomOut").hidden = !isZoomed();
+}
+function animateViewBox(target, dur=850){
+  cancelAnimationFrame(vbRaf);
+  if(reduce || dur===0){ setViewBox(target); updateZoomUI(); return; }
+  const from={...vb}, t0=performance.now();
+  const ease=t=>t<.5 ? 4*t*t*t : 1-Math.pow(-2*t+2,3)/2;
+  const step=now=>{
+    const p=Math.min(1,(now-t0)/dur), e=ease(p);
+    setViewBox({
+      x:from.x+(target.x-from.x)*e, y:from.y+(target.y-from.y)*e,
+      w:from.w+(target.w-from.w)*e, h:from.h+(target.h-from.h)*e
+    });
+    if(p<1){ vbRaf=requestAnimationFrame(step); } else { updateZoomUI(); }
+  };
+  updateZoomUI();
+  vbRaf=requestAnimationFrame(step);
+}
+// Frame one destination, clamped so the camera never runs off the map.
+function zoomTo(i, factor=0.34, dur=850){
+  const d=P[i], cx=px(d[5]), cy=py(d[6]);
+  const w=W*factor, h=H*factor;
+  animateViewBox({
+    x: Math.max(0, Math.min(W-w, cx-w/2)),
+    y: Math.max(0, Math.min(H-h, cy-h/2)),
+    w, h
+  }, dur);
+}
+function resetZoom(){ animateViewBox(FULL, 650); }
+function clearSpotlight(){
+  if(!spotlight) return;
+  spotlight=false;
+  document.getElementById("mapbox").classList.remove("spotlight");
 }
 
 // ---------- render ----------
@@ -872,6 +937,7 @@ function renderDash(){
 // ---------- interactions ----------
 pinsG.addEventListener("click", e=>{
   const g=e.target.closest(".pin"); if(!g) return;
+  clearSpotlight();
   sel=+g.dataset.i; render();
 });
 pinsG.addEventListener("keydown", e=>{
@@ -891,12 +957,15 @@ pinsG.addEventListener("mouseout", ()=>tip.style.opacity=0);
 
 document.getElementById("list").addEventListener("click", e=>{
   const b=e.target.closest("button"); if(!b) return;
+  clearSpotlight();
   sel=+b.dataset.i; render();
+  // While zoomed in, keep the camera on whatever is selected.
+  if(isZoomed()) zoomTo(sel, vb.w/W, 450);
   document.getElementById("card").scrollIntoView({behavior:reduce?"auto":"smooth", block:"nearest"});
 });
 
 document.querySelectorAll(".chip").forEach(b=>{
-  b.onclick=()=>{ filter=b.dataset.dir; sel=null; render(); };
+  b.onclick=()=>{ clearSpotlight(); resetZoom(); filter=b.dataset.dir; sel=null; render(); };
 });
 
 // card actions (pick / ride / ratings / leftover)
@@ -931,17 +1000,37 @@ document.getElementById("cardInner").addEventListener("change", e=>{
   log[code]=cur; save(); render();
 });
 
-document.getElementById("spin").onclick=()=>{
+const spinBtn=document.getElementById("spin");
+spinBtn.onclick=()=>{
+  if(spinning) return;
   const pool=P.map((d,i)=>i).filter(i=>(filter==="ALL"||P[i][0][0]===filter) && !statusOf(P[i][0]));
   if(!pool.length){ alert("Everything in this filter is already picked or ridden. Switch direction, or clear one from the Scoreboard."); return; }
+
+  spinning=true;
+  spinBtn.disabled=true;
+  spinBtn.textContent="Scanning…";
+  clearSpotlight();
+  animateViewBox(FULL, 400);          // shuffle reads across the whole map
+
   let n=0;
+  const total=reduce?1:18;
   const tick=()=>{
     sel=pool[Math.floor(Math.random()*pool.length)];
     render();
-    if(++n<(reduce?1:18)) setTimeout(tick, 40+n*9);
+    if(++n<total){ setTimeout(tick, 40+n*9); return; }
+    // Landed: spotlight the winner and fly the camera in.
+    spinning=false;
+    spinBtn.disabled=false;
+    spinBtn.textContent="Spin the map";
+    spotlight=true;
+    document.getElementById("mapbox").classList.add("spotlight");
+    zoomTo(sel);
+    render();
   };
   tick();
 };
+
+document.getElementById("zoomOut").onclick=()=>{ clearSpotlight(); resetZoom(); };
 
 // tabs
 function setView(v){
