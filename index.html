@@ -619,7 +619,7 @@ const LAGUNA=[
 // Ride origin. Drop a pin on Bloomers Apartment in Google Maps, copy the
 // "14.7601, 121.0450" pair it shows, and paste it here as [lon, lat] —
 // note Google prints lat first, this array takes lon first.
-const HOME=[121.045,14.760];
+const HOME=[121.0524634,14.7484573];   // Bloomers Apartment, Camarin
 const HOME_LABEL="Bloomers Apartment, Camarin";
 
 // Road routing runs in the visitor's browser, not at build time. OSRM's public
@@ -774,7 +774,9 @@ function clearSpotlight(){
 }
 
 // ---------- routes ----------
-const RKEY="backride:routes:v1";
+// Bump this whenever HOME moves: every cached route was measured from the old
+// origin, so stale entries would report distances for a place you no longer start from.
+const RKEY="backride:routes:v2";
 let routes={};      // code -> {d:metres, g:[[lon,lat],...]} | {failed:true}
 let routeReq=0;     // guards against a slow fetch overwriting a newer selection
 
