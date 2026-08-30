@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Backride Dates — The Luzon Map</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Backride Dates: 100 motorcycle date destinations within a day's ride of Camarin, North Caloocan, plotted on an interactive map of Luzon.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --sea:#080D14;
+    --sea-2:#0D1620;
+    --land:#1B2A2E;
+    --land-hi:#26393C;
+    --coast:#4E7A75;
+    --ink:#E8EEF0;
+    --ink-dim:#7E9198;
+    --ink-faint:#4C5F66;
+    --n:#F0B429;
+    --w:#46A8C4;
+    --e:#7CC47F;
+    --s:#C98BDB;
+    --home:#FF5C46;
+    --line:#1E2C33;
+    --disp:"Barlow Condensed", "Oswald", "Haettenschweiler", Impact, sans-serif;
+    --body:"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(1200px 700px at 20% -10%, #12202B 0%, transparent 60%),
+      var(--sea);
+    color:var(--ink);
+    font-family:var(--body);
+    -webkit-font-smoothing:antialiased;
+    padding:22px 20px 40px;
+  }
+  .wrap{max-width:1180px;margin:0 auto}
+
+  /* ---------- header ---------- */
+  header{border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:18px}
+  .eyebrow{
+    font-family:var(--disp);font-size:13px;letter-spacing:.24em;text-transform:uppercase;
+    color:var(--ink-dim);margin:0 0 6px;display:flex;align-items:center;gap:10px;
+  }
+  .eyebrow::after{content:"";flex:1;height:1px;background:var(--line)}
+  h1{
+    font-family:var(--disp);font-weight:700;font-size:clamp(38px,7vw,62px);
+    line-height:.94;letter-spacing:-.01em;margin:0 0 8px;text-transform:uppercase;
+  }
+  h1 em{font-style:normal;color:var(--ink-faint)}
+  .sub{margin:0;color:var(--ink-dim);font-size:14px;max-width:56ch;line-height:1.55}
+
+  /* ---------- controls ---------- */
+  .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:18px 0 14px}
+  .chip{
+    font-family:var(--disp);font-size:15px;letter-spacing:.1em;text-transform:uppercase;
+    background:transparent;color:var(--ink-dim);border:1px solid var(--line);
+    padding:7px 14px 6px;border-radius:2px;cursor:pointer;transition:.16s;
+    display:inline-flex;align-items:center;gap:7px;
+  }
+  .chip:hover{color:var(--ink);border-color:var(--ink-faint)}
+  .chip .dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+  .chip[aria-pressed="true"]{color:var(--ink);border-color:currentColor}
+  .chip[data-dir="N"][aria-pressed="true"]{color:var(--n)}
+  .chip[data-dir="W"][aria-pressed="true"]{color:var(--w)}
+  .chip[data-dir="E"][aria-pressed="true"]{color:var(--e)}
+  .chip[data-dir="S"][aria-pressed="true"]{color:var(--s)}
+  .chip .ct{font-size:12px;color:var(--ink-faint)}
+  .spacer{flex:1}
+  .spin{
+    font-family:var(--disp);font-size:16px;letter-spacing:.14em;text-transform:uppercase;
+    background:var(--ink);color:#0A1017;border:0;padding:9px 20px 8px;border-radius:2px;
+    cursor:pointer;font-weight:600;transition:.16s;
+  }
+  .spin:hover{background:#fff;transform:translateY(-1px)}
+  .spin:active{transform:translateY(0)}
+  .tally{font-family:var(--disp);font-size:14px;letter-spacing:.12em;color:var(--ink-faint);text-transform:uppercase}
+  .tally b{color:var(--ink);font-weight:600}
+
+  /* ---------- layout ---------- */
+  .grid{display:grid;grid-template-columns:1fr 330px;gap:22px;align-items:start}
+  @media (max-width:860px){.grid{grid-template-columns:1fr}}
+
+  .mapbox{
+    position:relative;border:1px solid var(--line);border-radius:3px;
+    background:linear-gradient(170deg,var(--sea-2),var(--sea));overflow:hidden;
+  }
+  svg{display:block;width:100%;height:auto}
+
+  /* ---------- map pieces ---------- */
+  .coast{fill:url(#landfill);stroke:var(--coast);stroke-width:.9;stroke-linejoin:round}
+  .lake{fill:#0B1620;stroke:var(--coast);stroke-width:.7;opacity:.85}
+  .graticule{stroke:#16232B;stroke-width:.5}
+
+  .pin{cursor:pointer;transform-box:fill-box;transform-origin:50% 100%}
+  .pin .body{stroke:#0A1017;stroke-width:.8;transition:.18s}
+  .pin .eye{fill:#0A1017}
+  .pin .halo{opacity:0;transition:.2s}
+  .pin:hover .halo{opacity:.28}
+  .pin.sel .halo{opacity:.4}
+  .pin.dim{opacity:.13;pointer-events:none}
+  .pin.done .body{fill:#3C4C52 !important}
+  .pin.done .eye{fill:#7CC47F}
+  .pin .code{
+    font-family:var(--disp);font-size:6.4px;letter-spacing:.06em;fill:var(--ink-dim);
+    text-anchor:middle;opacity:0;transition:.2s;pointer-events:none;
+  }
+  .showcodes .pin:not(.dim) .code{opacity:1}
+  .pin.sel .body{stroke:#fff;stroke-width:1.4}
+
+  .home circle{fill:none;stroke:var(--home);stroke-width:1.1}
+  .home .core{fill:var(--home);stroke:none}
+  .home text{font-family:var(--disp);font-size:8px;letter-spacing:.16em;fill:var(--home);text-transform:uppercase}
+  .pulse{animation:pulse 3.4s ease-out infinite}
+  @keyframes pulse{
+    0%{r:6;opacity:.7}
+    100%{r:26;opacity:0}
+  }
+
+  .drop{animation:drop .5s cubic-bezier(.2,.9,.3,1.3) both}
+  @keyframes drop{from{opacity:0;transform:translateY(-14px) scale(.6)}to{opacity:1;transform:translateY(0) scale(1)}}
+
+  .rose{fill:none;stroke:var(--ink-faint);stroke-width:.6;opacity:.35}
+  .roselabel{font-family:var(--disp);font-size:9px;letter-spacing:.2em;fill:var(--ink-faint);text-anchor:middle;opacity:.6}
+
+  /* ---------- tooltip ---------- */
+  .tip{
+    position:absolute;pointer-events:none;background:#0A1017;border:1px solid #2B3D45;
+    padding:6px 9px;border-radius:2px;font-size:12px;white-space:nowrap;opacity:0;
+    transition:opacity .12s;transform:translate(-50%,-140%);z-index:5;
+  }
+  .tip b{font-family:var(--disp);font-size:14px;letter-spacing:.04em;font-weight:600;display:block}
+  .tip span{color:var(--ink-dim);font-size:11px}
+
+  /* ---------- date card ---------- */
+  .card{
+    border:1px solid var(--line);border-radius:3px;background:#0C141B;
+    position:sticky;top:20px;overflow:hidden;
+  }
+  .card .band{height:4px;background:var(--ink-faint);transition:.2s}
+  .card .inner{padding:18px}
+  .card .dir{
+    font-family:var(--disp);font-size:12px;letter-spacing:.24em;text-transform:uppercase;
+    color:var(--ink-faint);margin:0 0 4px;
+  }
+  .card h2{
+    font-family:var(--disp);font-weight:600;font-size:29px;line-height:1.02;
+    margin:0 0 14px;text-transform:uppercase;letter-spacing:-.005em;
+  }
+  .row{border-top:1px solid var(--line);padding:11px 0;display:flex;gap:12px}
+  .row .k{
+    font-family:var(--disp);font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--ink-faint);width:62px;flex:none;padding-top:2px;
+  }
+  .row .v{font-size:13.5px;line-height:1.5;color:var(--ink)}
+  .budget{font-family:var(--disp);font-size:26px;font-weight:600;letter-spacing:.01em}
+  .mark{
+    width:100%;margin-top:14px;font-family:var(--disp);font-size:14px;letter-spacing:.14em;
+    text-transform:uppercase;background:transparent;border:1px solid var(--ink-faint);
+    color:var(--ink-dim);padding:9px;border-radius:2px;cursor:pointer;transition:.16s;
+  }
+  .mark:hover{color:var(--ink);border-color:var(--ink)}
+  .mark[data-on="1"]{background:#17301F;border-color:#3F7A4C;color:#9BDCA6}
+  .empty{padding:30px 18px;color:var(--ink-faint);font-size:13px;line-height:1.6}
+
+  /* ---------- list ---------- */
+  .list{margin-top:14px;border:1px solid var(--line);border-radius:3px;max-height:300px;overflow:auto}
+  .list button{
+    display:flex;width:100%;gap:9px;align-items:baseline;text-align:left;background:transparent;
+    border:0;border-bottom:1px solid var(--line);color:var(--ink-dim);padding:8px 11px;
+    cursor:pointer;font-family:var(--body);font-size:12.5px;transition:.12s;
+  }
+  .list button:hover{background:#111C24;color:var(--ink)}
+  .list button .cd{font-family:var(--disp);font-size:12px;letter-spacing:.08em;width:30px;flex:none}
+  .list button.done .nm{text-decoration:line-through;opacity:.5}
+  .list::-webkit-scrollbar{width:6px}
+  .list::-webkit-scrollbar-thumb{background:#22333B;border-radius:3px}
+
+  footer{margin-top:26px;border-top:1px solid var(--line);padding-top:14px;
+    color:var(--ink-faint);font-size:12px;line-height:1.7}
+
+  :focus-visible{outline:2px solid var(--n);outline-offset:2px}
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none !important;transition:none !important}
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<header>
+  <p class="eyebrow">Backride Dates</p>
+  <h1>The Luzon Map <em>/ 100 Dates</em></h1>
+  <p class="sub">Every destination within a day's ride of Camarin, North Caloocan. Tap a pin for its Date Card. Spin the map to let it pick for you.</p>
+</header>
+
+<div class="controls">
+  <button class="chip" data-dir="ALL" aria-pressed="true">All <span class="ct">100</span></button>
+  <button class="chip" data-dir="N" aria-pressed="false"><span class="dot"></span>North <span class="ct">28</span></button>
+  <button class="chip" data-dir="W" aria-pressed="false"><span class="dot"></span>West <span class="ct">22</span></button>
+  <button class="chip" data-dir="E" aria-pressed="false"><span class="dot"></span>East <span class="ct">25</span></button>
+  <button class="chip" data-dir="S" aria-pressed="false"><span class="dot"></span>South <span class="ct">25</span></button>
+  <span class="spacer"></span>
+  <span class="tally"><b id="tallyN">0</b> / 100 ridden</span>
+  <button class="spin" id="spin">Spin the map</button>
+</div>
+
+<div class="grid">
+  <div>
+    <div class="mapbox" id="mapbox">
+      <svg id="map" viewBox="0 0 600 700" role="img" aria-label="Map of Luzon with 100 ride destinations">
+        <defs>
+          <linearGradient id="landfill" x1="0" y1="0" x2="0.4" y2="1">
+            <stop offset="0" stop-color="#26393C"/>
+            <stop offset="1" stop-color="#16232A"/>
+          </linearGradient>
+        </defs>
+        <g id="grat"></g>
+        <path id="coast" class="coast"></path>
+        <path id="laguna" class="lake"></path>
+        <ellipse id="taal" class="lake"></ellipse>
+        <g id="rose"></g>
+        <g id="pins"></g>
+        <g id="homeg" class="home"></g>
+      </svg>
+      <div class="tip" id="tip"></div>
+    </div>
+    <div class="list" id="list"></div>
+  </div>
+
+  <div class="card" id="card">
+    <div class="band" id="band"></div>
+    <div class="inner" id="cardInner">
+      <div class="empty">No destination selected.<br><br>Pick a pin on the map, choose from the list, or hit <b style="color:var(--ink-dim)">Spin the map</b> and let it decide your month.</div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  Ride times are one way from Camarin, two-up at a moderate pace. Budget is the cash in the envelope and covers everything: gas, toll, entrance, food.<br>
+  Book ahead for Masungi, Las Casas, Pinatubo and Hundred Islands. Pawikan releases run roughly November to February. In the rainy months, stay North and East.
+</footer>
+</div>
+
+<script>
+const DIRS = {
+  N:{name:"North", color:"#F0B429", blurb:"Bulacan, Nueva Ecija, Tarlac, Pampanga, Pangasinan"},
+  W:{name:"West",  color:"#46A8C4", blurb:"Bataan, Zambales, Subic"},
+  E:{name:"East",  color:"#7CC47F", blurb:"Rizal, Quezon, Marilaque"},
+  S:{name:"South", color:"#C98BDB", blurb:"Cavite, Batangas, Laguna, south Quezon"}
+};
+
+// code, name, activity, ride, budget, lon, lat
+const P = [
+["N1","Angat Dam Viewpoint","Picnic breakfast at the spillway view","1h",1500,121.16,14.91],
+["N2","Bustos Dam","Sunset walk on the dam, dinner in Baliuag","1h",1500,120.92,14.95],
+["N3","Candaba Viaduct & Swamp","Sunrise birdwatching, then Candaba pancit","1h",1500,120.83,15.09],
+["N4","Barasoain Church, Malolos","Heritage walk plus a Malolos food crawl","1h",1500,120.81,14.85],
+["N5","Biak-na-Bato","River cave trek and a swim at Bayukbok","1.5h",1500,121.03,15.10],
+["N6","Doña Remedios Trinidad Road","Ride the twisties, roadside lunch at a viewpoint","1.5h",1500,121.10,15.00],
+["N7","Sibul Springs","Soak in the old sulfur spring","1.5h",1500,121.00,15.13],
+["N8","Madlum River & Cave","Cross the river, explore the cave, swim","1.5h",1800,121.02,15.14],
+["N9","San Guillermo Church, Bacolor","See the half-buried church, then Pampanga sisig","1.5h",2000,120.65,15.00],
+["N10","Betis Church, Guagua","Look up at the painted ceiling, visit a furniture shop","1.5h",2000,120.63,14.97],
+["N11","Clark Sunset Valley","Sunset picnic on the parade grounds","1.5h",1800,120.54,15.18],
+["N12","San Fernando Lantern Workshops","Try making a parol together","1.5h",2000,120.69,15.03],
+["N13","Verdivia Falls, DRT","Trek in and swim under the falls","2h",1800,121.13,15.02],
+["N14","Mt. Arayat National Park","Short trail to the falls, picnic lunch","2h",2000,120.74,15.20],
+["N15","Puning Hot Spring","Hot spring soak and the sand spa","2h",3000,120.48,15.22],
+["N16","Capas National Shrine","Walk the memorial, learn the Death March story","2h",2000,120.55,15.35],
+["N17","Minalungao National Park","Raft the green river, climb the 1,000 steps","2.5h",2500,121.15,15.42],
+["N18","Camp Pangatian Shrine","War memorial visit plus Cabanatuan longganisa","2.5h",2000,120.98,15.48],
+["N19","Mt. Pinatubo Jump-off","4x4 ride and the crater lake trek","2.5h",3000,120.45,15.38],
+["N20","Monasterio de Tarlac","Sunrise at the viewdeck and the relic chapel","2.5h",2500,120.47,15.48],
+["N21","Isdaan, Gerona","Smash plates at the Tacsiyapo wall, floating lunch","2.5h",2500,120.60,15.61],
+["N22","Aquino Center, Tarlac City","Museum date, then Tarlac iniruban cake","2.5h",2000,120.59,15.48],
+["N23","Dupinga River, Gabaldon","Riverside picnic on the boulders","3.5h",3000,121.33,15.45],
+["N24","Pantabangan Dam","Lake viewpoint and the Canili road","3.5h",3000,121.14,15.80],
+["N25","Manaoag Church","Pilgrimage visit, bagoong and tupig pasalubong","3.5h",3000,120.49,16.04],
+["N26","Tayug Sunflower Maze","Walk the maze, sunflower photos (seasonal)","3.5h",2800,120.75,16.02],
+["N27","Lingayen Beach & Capitol","Beach walk and the old capitol grounds","4h",3000,120.23,16.02],
+["N28","Hundred Islands, Alaminos","Island hopping boat tour","4h",3000,119.98,16.20],
+
+["W1","Subic Bay Boardwalk","Waterfront dinner and the Subic lighthouse","2h",2000,120.28,14.82],
+["W2","Zoobic Safari","Tiger safari and the animal encounters","2h",3000,120.26,14.83],
+["W3","Ocean Adventure, Subic","Dolphin show and the open-water park","2h",3000,120.25,14.79],
+["W4","Balanga Wetland & Nature Park","Birdwatching from the viewing tower","2.5h",2000,120.53,14.68],
+["W5","Abucay Church","Visit the oldest church in Bataan","2.5h",2000,120.53,14.72],
+["W6","Mt. Samat Shrine","Ride the elevator up the memorial cross","2.5h",2500,120.49,14.66],
+["W7","Dunsulan Falls, Pilar","Falls picnic and a swim","2.5h",2200,120.47,14.64],
+["W8","El Kabayo Falls, Subic","Horseback ride to the falls","2.5h",2500,120.31,14.80],
+["W9","Triboa Bay Mangrove Park","Kayak through the mangrove channels","2.5h",2200,120.29,14.78],
+["W10","Las Casas Filipinas, Bagac","Heritage house tour in period costume","3h",3000,120.39,14.60],
+["W11","Bagac to Mariveles Coast Road","Coastal ride with stops at every cove view","3h",2500,120.42,14.52],
+["W12","Five Fingers Coves, Mariveles","Boat out to the hidden coves","3h",3000,120.50,14.43],
+["W13","Pawikan Center, Morong","Release baby sea turtles (Nov to Feb)","3h",2800,120.27,14.68],
+["W14","Subic to Iba Coastal Highway","Sunset ride along the whole Zambales coast","3h",2500,120.09,15.10],
+["W15","Pundaquit, San Antonio","Boat across to Anawangin Cove","3h",3000,120.07,14.94],
+["W16","Capones & Camara Viewpoint","Boat to the old Spanish lighthouse","3h",3000,120.03,14.95],
+["W17","Nagsasa Cove","Cove day trip with the agoho trees","3.5h",3000,120.05,14.87],
+["W18","Liwliwa, San Felipe","Beginner surf lesson together","3.5h",3000,120.07,15.05],
+["W19","Crystal Beach, San Narciso","Beach day and a surf session","3.5h",3000,120.07,15.11],
+["W20","Bucao Lahar Plains, Botolan","Ride the lahar landscape, moon-surface photos","3.5h",2800,120.02,15.30],
+["W21","Iba Town & Mango Farms","Market date, mangoes straight from the farm","3.5h",2500,119.98,15.33],
+["W22","Potipot Island, Candelaria","Short boat crossing, walk the whole island","4h",3000,119.92,15.57],
+
+["E1","Hinulugang Taktak, Antipolo","Park walk, then Antipolo suman and mangga","1h",1500,121.18,14.60],
+["E2","Cloud 9, Antipolo","Hanging bridge and the city lights at dusk","1h",1500,121.21,14.61],
+["E3","Boso-Boso Church Ruins","Explore the old church and the quiet grounds","1.5h",1500,121.25,14.63],
+["E4","Marilaque Riders' Stops","Breakfast crawl through the famous stops","1.5h",1500,121.28,14.62],
+["E5","Angono Petroglyphs","Ancient rock carvings and the Angono galleries","1.5h",1800,121.16,14.52],
+["E6","Morong Church, Rizal","Baroque heritage church and the town plaza","1.5h",1500,121.24,14.51],
+["E7","Binangonan Lakeshore","Lake sunset with Talim Island across the water","1.5h",1500,121.19,14.46],
+["E8","Wawa Dam & Gorge","Swim in the gorge between the cliffs","1.5h",1800,121.19,14.73],
+["E9","Mt. Purro Nature Reserve","Day pass, hammocks and the river","1.5h",2500,121.23,14.66],
+["E10","Pililla Wind Farm","Sunset under the turbines","2h",1500,121.32,14.48],
+["E11","Regina RICA, Tanay","Climb to the 71-foot statue, walk the gardens","2h",1800,121.34,14.58],
+["E12","Daranak & Batlag Falls","Swim at both falls in one trip","2h",2000,121.35,14.56],
+["E13","Treasure Mountain, Tanay","Camp deck view over the Sierra Madre","2h",2000,121.37,14.60],
+["E14","Sierra Madre Viewdecks","Café date on the ridge with the valley view","2h",2000,121.39,14.63],
+["E15","Masungi Georeserve","Discovery Trail (book weeks ahead)","2h",3000,121.30,14.59],
+["E16","Mt. Sembrano, Pililla","Half-day hike with the Laguna Lake view","2h",2000,121.31,14.43],
+["E17","Tanay Adventure Camp","Zipline and rope course together","2.5h",2500,121.33,14.54],
+["E18","Tinipak River, Daraitan","White rock formations and the cold river","2.5h",2500,121.44,14.68],
+["E19","Kinabuan Falls, Tanay","Trek in through the rice fields to the falls","2.5h",2200,121.41,14.65],
+["E20","Laiban to Daraitan Backroad","Offbeat ride through the Sierra Madre foothills","2.5h",2000,121.42,14.71],
+["E21","Jala-Jala Peninsula Loop","Ride the whole lakeside loop","2.5h",2000,121.33,14.35],
+["E22","Real, Quezon","Where Marilaque finally meets the sea","3h",2500,121.61,14.66],
+["E23","Dinahican Fish Port, Infanta","Sunrise at the port, cook your own seafood haul","3.5h",2800,121.68,14.73],
+["E24","Agos River, General Nakar","River picnic and a swim","3.5h",2800,121.56,14.78],
+["E25","Umiray River Mouth","Remote coast where the river meets the Pacific","4h",3000,121.59,15.00],
+
+["S1","Aguinaldo Shrine, Kawit","Tour the independence house, then Cavite bibingka","2h",2000,120.90,14.44],
+["S2","Balite Falls, Amadeo","Swim under the falls","2.5h",2000,120.93,14.18],
+["S3","Amadeo Coffee Farms","Coffee farm tour and tasting","2.5h",2200,120.90,14.15],
+["S4","Rizal Shrine, Calamba","Rizal's house, then Calamba buko pie","2.5h",2000,121.16,14.21],
+["S5","Los Baños Hot Springs","Hot spring soak for the afternoon","2.5h",2500,121.22,14.17],
+["S6","Tagaytay Ridge","Bulalo lunch with the Taal view","3h",2500,120.94,14.11],
+["S7","Kaybiang Tunnel","Ride the tunnel and the whole coastal road","3h",2500,120.65,14.24],
+["S8","Caleruega Church, Nasugbu","Garden chapel and the hilltop view","3h",2500,120.83,14.06],
+["S9","Mt. Batulao Viewpoint","Sunrise hike up the ridge","3h",2500,120.80,14.03],
+["S10","Taal Heritage Town","Ancestral houses, the basilica, tapa and longganisa","3h",2500,120.92,13.88],
+["S11","Talisay Lakeshore","Kayak on Taal Lake, volcano from below","3h",2800,121.02,14.09],
+["S12","Patungan Cove, Maragondon","Descend to the hidden black sand cove","3h",2800,120.68,14.24],
+["S13","Nagcarlan Underground Cemetery","Explore the historic underground crypt","3h",2200,121.41,14.13],
+["S14","Liliw, Laguna","Tsinelas shopping and the red brick church","3h",2200,121.44,14.13],
+["S15","Paete, Laguna","Woodcarving workshop, carve something together","3h",2200,121.48,14.36],
+["S16","Pico de Loro, Hamilo","Trek to the monolith viewpoint","3.5h",3000,120.66,14.20],
+["S17","Anilao, Mabini","Snorkeling over the coral gardens","3.5h",3000,120.88,13.73],
+["S18","Taytay Falls, Majayjay","Swim in the cold mountain pool","3.5h",2500,121.47,14.15],
+["S19","Lake Caliraya, Cavinti","Kayak or paddleboard on the lake","3.5h",2800,121.51,14.28],
+["S20","Pagsanjan & Cavinti Falls","Bangka ride shooting the rapids","3.5h",3000,121.45,14.27],
+["S21","Lucban & Kamay ni Hesus","Climb the hill, then pancit habhab","3.5h",2800,121.55,14.11],
+["S22","Laiya, San Juan","Full beach day","4h",3000,121.40,13.68],
+["S23","Burot Beach, Calatagan","Beach camp and a sunset swim","4h",3000,120.63,13.85],
+["S24","Lobo Coastal Road","Rough but stunning coastal ride","4h",3000,121.22,13.65],
+["S25","Atimonan Zigzag Road","Ride the Bitukang Manok through the national park","4h",3000,121.92,14.00]
+];
+
+// ---------- projection ----------
+const LON0=119.62, LON1=122.36, LAT0=13.42, LAT1=16.60, W=600, H=700;
+const px = lon => (lon-LON0)/(LON1-LON0)*W;
+const py = lat => (LAT1-lat)/(LAT1-LAT0)*H;
+
+// ---------- coastline ----------
+const COAST=[
+[119.79,16.35],[119.90,16.45],[120.06,16.41],[120.19,16.23],[120.31,16.08],[120.44,16.02],[120.53,16.11],
+[120.46,16.29],[120.41,16.46],[120.43,16.60],[122.36,16.60],[122.18,16.28],[122.03,16.04],[121.84,15.90],
+[121.61,15.75],[121.47,15.49],[121.41,15.24],[121.55,15.04],[121.63,14.88],[121.71,14.75],[121.62,14.62],
+[121.71,14.44],[121.81,14.29],[121.91,14.14],[121.99,14.01],[122.11,13.89],[122.23,13.74],[122.32,13.60],
+[122.36,13.42],[122.02,13.42],[121.94,13.71],[121.84,13.88],[121.64,13.96],[121.44,13.93],[121.29,13.84],
+[121.21,13.60],[121.05,13.67],[120.98,13.78],[120.89,13.69],[120.86,13.88],[120.75,13.92],[120.61,13.81],
+[120.56,13.98],[120.61,14.13],[120.59,14.29],[120.65,14.41],[120.80,14.45],[120.92,14.48],[120.99,14.57],
+[120.94,14.73],[120.80,14.87],[120.66,14.87],[120.56,14.77],[120.53,14.60],[120.50,14.44],[120.43,14.39],
+[120.37,14.51],[120.32,14.67],[120.25,14.70],[120.29,14.83],[120.19,14.87],[120.07,15.01],[119.97,15.31],
+[119.92,15.63],[119.87,15.91],[119.83,16.13]
+];
+const LAGUNA=[
+[121.02,14.47],[121.11,14.55],[121.22,14.58],[121.33,14.53],[121.40,14.42],[121.42,14.29],[121.35,14.19],
+[121.27,14.18],[121.21,14.29],[121.15,14.33],[121.09,14.28],[121.02,14.32],[120.99,14.40]
+];
+const HOME=[121.045,14.760];
+
+const toPath = a => a.map((p,i)=>(i?"L":"M")+px(p[0]).toFixed(1)+","+py(p[1]).toFixed(1)).join(" ")+" Z";
+document.getElementById("coast").setAttribute("d", toPath(COAST));
+document.getElementById("laguna").setAttribute("d", toPath(LAGUNA));
+const taal=document.getElementById("taal");
+taal.setAttribute("cx",px(121.00)); taal.setAttribute("cy",py(14.00));
+taal.setAttribute("rx",(px(121.11)-px(121.00))); taal.setAttribute("ry",(py(13.88)-py(14.00)));
+
+// graticule
+let g="";
+for(let lat=14;lat<=16;lat++) g+=`<line class="graticule" x1="0" y1="${py(lat)}" x2="${W}" y2="${py(lat)}"/>`;
+for(let lon=120;lon<=122;lon++) g+=`<line class="graticule" x1="${px(lon)}" y1="0" x2="${px(lon)}" y2="${H}"/>`;
+document.getElementById("grat").innerHTML=g;
+
+// compass rose at home
+const hx=px(HOME[0]), hy=py(HOME[1]);
+document.getElementById("rose").innerHTML=`
+  <circle class="rose" cx="${hx}" cy="${hy}" r="78"/>
+  <circle class="rose" cx="${hx}" cy="${hy}" r="130"/>
+  <circle class="rose" cx="${hx}" cy="${hy}" r="182"/>
+  <text class="roselabel" x="${hx}" y="${hy-186}">N</text>
+  <text class="roselabel" x="${hx+188}" y="${hy+3}">E</text>
+  <text class="roselabel" x="${hx}" y="${hy+194}">S</text>
+  <text class="roselabel" x="${hx-188}" y="${hy+3}">W</text>`;
+
+document.getElementById("homeg").innerHTML=`
+  <circle class="pulse" cx="${hx}" cy="${hy}" r="6"/>
+  <circle cx="${hx}" cy="${hy}" r="7"/>
+  <circle class="core" cx="${hx}" cy="${hy}" r="2.8"/>
+  <text x="${hx+12}" y="${hy+3}">Camarin</text>`;
+
+// ---------- pins ----------
+const PIN="M0,0 c-4.6,-5.9 -6.8,-9.2 -6.8,-12.5 a6.8,6.8 0 1,1 13.6,0 c0,3.3 -2.2,6.6 -6.8,12.5 z";
+const pinsG=document.getElementById("pins");
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let html="";
+P.forEach((d,i)=>{
+  const [code,name,act,ride,bud,lon,lat]=d;
+  const dir=code[0], c=DIRS[dir].color;
+  const x=px(lon), y=py(lat);
+  html+=`<g class="pin${reduce?"":" drop"}" data-i="${i}" data-dir="${dir}" tabindex="0" role="button"
+           aria-label="${name}" transform="translate(${x.toFixed(1)},${y.toFixed(1)})"
+           style="animation-delay:${(i*11)}ms">
+    <circle class="halo" r="13" fill="${c}"/>
+    <path class="body" d="${PIN}" fill="${c}"/>
+    <circle class="eye" cx="0" cy="-12.5" r="2.5"/>
+    <text class="code" y="8.5">${code}</text>
+  </g>`;
+});
+pinsG.innerHTML=html;
+
+// ---------- state ----------
+let filter="ALL", sel=null, done=new Set();
+
+const tip=document.getElementById("tip"), mapbox=document.getElementById("mapbox");
+const svg=document.getElementById("map");
+
+function svgToBox(x,y){
+  const r=svg.getBoundingClientRect();
+  return [r.width*x/W, r.height*y/H];
+}
+
+function render(){
+  document.querySelectorAll(".pin").forEach(el=>{
+    const i=+el.dataset.i;
+    el.classList.toggle("dim", filter!=="ALL" && el.dataset.dir!==filter);
+    el.classList.toggle("sel", sel===i);
+    el.classList.toggle("done", done.has(P[i][0]));
+  });
+  svg.parentElement.classList.toggle("showcodes", filter!=="ALL");
+  document.querySelectorAll(".chip").forEach(b=>b.setAttribute("aria-pressed", b.dataset.dir===filter));
+  document.getElementById("tallyN").textContent=done.size;
+  renderList();
+  renderCard();
+}
+
+function renderList(){
+  const rows=P.map((d,i)=>[d,i]).filter(([d])=>filter==="ALL"||d[0][0]===filter);
+  document.getElementById("list").innerHTML=rows.map(([d,i])=>
+    `<button data-i="${i}" class="${done.has(d[0])?"done":""}">
+       <span class="cd" style="color:${DIRS[d[0][0]].color}">${d[0]}</span>
+       <span class="nm">${d[1]}</span>
+     </button>`).join("");
+}
+
+function renderCard(){
+  const band=document.getElementById("band"), inner=document.getElementById("cardInner");
+  if(sel===null){ band.style.background="var(--ink-faint)"; return; }
+  const [code,name,act,ride,bud,lon,lat]=P[sel];
+  const dir=code[0], c=DIRS[dir].color, isDone=done.has(code);
+  band.style.background=c;
+  inner.innerHTML=`
+    <p class="dir" style="color:${c}">${code} &nbsp;·&nbsp; ${DIRS[dir].name}</p>
+    <h2>${name}</h2>
+    <div class="row"><span class="k">Activity</span><span class="v">${act}</span></div>
+    <div class="row"><span class="k">Ride</span><span class="v">${ride} one way from Camarin</span></div>
+    <div class="row"><span class="k">Budget</span><span class="v budget" style="color:${c}">₱${bud.toLocaleString()}</span></div>
+    <button class="mark" id="markBtn" data-on="${isDone?1:0}">${isDone?"Date completed ✓":"Mark as ridden"}</button>`;
+  document.getElementById("markBtn").onclick=()=>{
+    done.has(code)?done.delete(code):done.add(code);
+    save(); render();
+  };
+}
+
+// ---------- interactions ----------
+pinsG.addEventListener("click", e=>{
+  const g=e.target.closest(".pin"); if(!g) return;
+  sel=+g.dataset.i; render();
+});
+pinsG.addEventListener("keydown", e=>{
+  if(e.key!=="Enter"&&e.key!==" ") return;
+  const g=e.target.closest(".pin"); if(!g) return;
+  e.preventDefault(); sel=+g.dataset.i; render();
+});
+pinsG.addEventListener("mouseover", e=>{
+  const g=e.target.closest(".pin"); if(!g||g.classList.contains("dim")) return;
+  const d=P[+g.dataset.i];
+  tip.innerHTML=`<b>${d[1]}</b><span>${d[3]} · ₱${d[4].toLocaleString()}</span>`;
+  const t=g.getAttribute("transform").match(/[-\d.]+/g);
+  const [bx,by]=svgToBox(+t[0],+t[1]);
+  tip.style.left=bx+"px"; tip.style.top=by+"px"; tip.style.opacity=1;
+});
+pinsG.addEventListener("mouseout", ()=>tip.style.opacity=0);
+
+document.getElementById("list").addEventListener("click", e=>{
+  const b=e.target.closest("button"); if(!b) return;
+  sel=+b.dataset.i; render();
+  document.getElementById("card").scrollIntoView({behavior:reduce?"auto":"smooth", block:"nearest"});
+});
+
+document.querySelectorAll(".chip").forEach(b=>{
+  b.onclick=()=>{ filter=b.dataset.dir; sel=null; render(); };
+});
+
+document.getElementById("spin").onclick=()=>{
+  const pool=P.map((d,i)=>i)
+    .filter(i=>(filter==="ALL"||P[i][0][0]===filter) && !done.has(P[i][0]));
+  if(!pool.length){ alert("Every destination in this filter is already ridden. Switch direction or reset a pin."); return; }
+  let n=0;
+  const tick=()=>{
+    sel=pool[Math.floor(Math.random()*pool.length)];
+    render();
+    if(++n<(reduce?1:18)) setTimeout(tick, 40+n*9);
+  };
+  tick();
+};
+
+// ---------- persistence ----------
+function save(){
+  try{ localStorage.setItem("backride:done", JSON.stringify([...done])); }catch(e){}
+}
+function load(){
+  try{
+    const raw=localStorage.getItem("backride:done");
+    if(raw) done=new Set(JSON.parse(raw));
+  }catch(e){}
+  render();
+}
+load();
+</script>
+</body>
+</html>
