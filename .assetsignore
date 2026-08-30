@@ -1,0 +1,10 @@
+# Repo files that should live in git but NOT be served publicly on the site.
+# Gitignore-style patterns, relative to the assets directory (the repo root).
+docs/
+README.md
+wrangler.jsonc
+.gitignore
+.assetsignore
+**/node_modules
+**/.DS_Store
+**/.git

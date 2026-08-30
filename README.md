@@ -2,7 +2,7 @@
 
 A concept site for the **Backride Dates** YouTube series: an interactive map of 100 motorcycle date destinations, every one of them within a day's ride of Camarin, North Caloocan.
 
-**[View the map »](index.html)**
+**[View the map »](index.html)** · **[Read the full series concept »](docs/CONCEPT.md)**
 
 ## What it is
 
@@ -57,6 +57,17 @@ Deployed to Cloudflare via the Git integration, which runs `npx wrangler deploy`
 ```
 
 Dashboard settings that must match: **Build command** empty, **Root directory** `/`, and **Production branch** `main`.
+
+Because the asset directory is the repo root, every file here would otherwise be served publicly. `.assetsignore` excludes the repo-only files — `docs/`, `README.md`, and the config files — so the live site serves just `index.html`.
+
+## Repo layout
+
+| Path | Purpose | Served publicly? |
+|---|---|---|
+| `index.html` | The interactive map — the whole site | Yes |
+| `docs/CONCEPT.md` | Full series concept: budget tiers, all 100 places, starter wheel, scoreboard, practical notes | No |
+| `wrangler.jsonc` | Cloudflare Workers static-assets config | No |
+| `.assetsignore` | Keeps repo-only files off the live site | No |
 
 ## Notes for the series
 
