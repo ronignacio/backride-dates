@@ -30,7 +30,30 @@ Destinations are grouped into four directions radiating from home base:
 - **Rating** — score a ridden date out of 10 three ways (his, her, viewer) and log what was left in the envelope.
 - **Scoreboard tab** — KPI tiles, progress by direction, the episode log, and a ranking table sorted on the average of all three scores.
 - **Export / import** — progress lives in `localStorage`, which is per-browser. Export to JSON after an episode and import on the other device to keep both phones in step.
+- **Route overlay** — selecting a destination draws the road route from home base onto the map and reports the road distance and compass bearing.
+- **Ride directions** — every Date Card links straight into Google Maps with `travelmode=two-wheeler`, Google's motorcycle routing, for live navigation on the phone.
 - **Keyboard + screen reader friendly** — pins are focusable and operable via keyboard, with `aria-label`s and `prefers-reduced-motion` support.
+
+## Routing and coordinates
+
+### How routes are produced
+
+Routes are fetched **in the visitor's browser at runtime**, not baked in at build time, from OSRM's keyless public demo server, then cached in `localStorage` so each destination is only ever fetched once. Geometry is simplified with Douglas–Peucker before storing, so a 2,000-point response persists and draws as roughly 100.
+
+Two deliberate limits:
+
+- **OSRM profiles a car, not a motorcycle.** So the card shows OSRM's road **distance**, which is profile-independent and trustworthy, and leaves ride *time* to the hand-authored two-up estimate from `docs/CONCEPT.md`. Car duration is never relabelled as motorcycle duration.
+- **The demo server is best-effort.** If it is unreachable, rate-limited, or slow (8s timeout), the map falls back to a dashed straight line and the card says *"… km direct line"*. A dashed line and the words "direct line" always mean straight-line distance; solid line and "by road" always mean a real routed road distance. The failure is cached so it is not retried on every click.
+
+For real motorcycle routing with turn-by-turn and live traffic, the **Ride directions** button hands off to Google Maps proper, which does support two-wheeler mode in the Philippines.
+
+### Coordinate accuracy
+
+Pin coordinates are **approximate** — good to a few kilometres, which reads as a few pixels at full extent but is visible when the camera zooms in. Twelve well-known landmarks have been corrected to surveyed positions (Hundred Islands is pinned at Lucap wharf, the actual boat jump-off, rather than the island group's centroid). The rest are inherited approximations.
+
+This does **not** affect navigation. Each destination carries a `"Place, Municipality, Province, Philippines"` query string as its eighth field, taken from `docs/CONCEPT.md`, and the Google Maps link uses that text rather than the coordinate — so Google resolves the real place even where the plotted pin is off. Coordinate error is cosmetic; the directions stay correct.
+
+Verifying all 100 against a geocoder would take one pass of a batch script against Nominatim or the Google Geocoding API.
 
 ### Pin states
 

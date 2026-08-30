@@ -184,6 +184,17 @@
   .drop{animation:drop .5s cubic-bezier(.2,.9,.3,1.3) backwards}
   @keyframes drop{from{opacity:0;transform:translateY(-14px) scale(.6)}to{opacity:1;transform:translateY(0) scale(1)}}
 
+  /* Route overlay. non-scaling-stroke keeps the line the same weight on
+     screen whether the camera is at full extent or zoomed onto one pin. */
+  .routeglow{fill:none;stroke:#05090E;stroke-width:5;stroke-linejoin:round;
+    stroke-linecap:round;opacity:.75;vector-effect:non-scaling-stroke}
+  .routeline{fill:none;stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round;
+    vector-effect:non-scaling-stroke}
+  /* Dashed = straight-line fallback, never a real road route. */
+  .routeline.direct{stroke-dasharray:6 5;opacity:.6}
+  .routedraw{stroke-dasharray:1400;stroke-dashoffset:1400;animation:routedraw 1.1s ease-out forwards}
+  @keyframes routedraw{to{stroke-dashoffset:0}}
+
   .rose{fill:none;stroke:var(--ink-faint);stroke-width:.6;opacity:.35}
   .roselabel{font-family:var(--disp);font-size:9px;letter-spacing:.2em;fill:var(--ink-faint);text-anchor:middle;opacity:.6}
 
@@ -225,6 +236,9 @@
     color:var(--ink-faint);width:62px;flex:none;padding-top:2px;
   }
   .row .v{font-size:13.5px;line-height:1.5;color:var(--ink)}
+  .row .sub3{color:var(--ink-faint);font-size:11.5px}
+  .btn.nav{display:block;text-align:center;text-decoration:none;border-color:#2E4A55;color:var(--ink-dim)}
+  .btn.nav:hover{border-color:var(--ink);color:var(--ink)}
   .budget{font-family:var(--disp);font-size:26px;font-weight:600;letter-spacing:.01em}
   .btn{
     width:100%;margin-top:10px;font-family:var(--disp);font-size:14px;letter-spacing:.14em;
@@ -396,6 +410,7 @@
           <path id="laguna" class="lake"></path>
           <ellipse id="taal" class="lake"></ellipse>
           <g id="rose"></g>
+          <g id="routeg"></g>
           <g id="pins"></g>
           <g id="homeg" class="home"></g>
         </svg>
@@ -468,111 +483,111 @@ const DIRS = {
 };
 const RATERS = [["his","His score"],["her","Her score"],["viewer","Viewer score"]];
 
-// code, name, activity, ride, budget, lon, lat
+// code, name, activity, ride, budget, lon, lat, maps-query
 const P = [
-["N1","Angat Dam Viewpoint","Picnic breakfast at the spillway view","1h",1500,121.16,14.91],
-["N2","Bustos Dam","Sunset walk on the dam, dinner in Baliuag","1h",1500,120.92,14.95],
-["N3","Candaba Viaduct & Swamp","Sunrise birdwatching, then Candaba pancit","1h",1500,120.83,15.09],
-["N4","Barasoain Church, Malolos","Heritage walk plus a Malolos food crawl","1h",1500,120.81,14.85],
-["N5","Biak-na-Bato","River cave trek and a swim at Bayukbok","1.5h",1500,121.03,15.10],
-["N6","Doña Remedios Trinidad Road","Ride the twisties, roadside lunch at a viewpoint","1.5h",1500,121.10,15.00],
-["N7","Sibul Springs","Soak in the old sulfur spring","1.5h",1500,121.00,15.13],
-["N8","Madlum River & Cave","Cross the river, explore the cave, swim","1.5h",1800,121.02,15.14],
-["N9","San Guillermo Church, Bacolor","See the half-buried church, then Pampanga sisig","1.5h",2000,120.65,15.00],
-["N10","Betis Church, Guagua","Look up at the painted ceiling, visit a furniture shop","1.5h",2000,120.63,14.97],
-["N11","Clark Sunset Valley","Sunset picnic on the parade grounds","1.5h",1800,120.54,15.18],
-["N12","San Fernando Lantern Workshops","Try making a parol together","1.5h",2000,120.69,15.03],
-["N13","Verdivia Falls, DRT","Trek in and swim under the falls","2h",1800,121.13,15.02],
-["N14","Mt. Arayat National Park","Short trail to the falls, picnic lunch","2h",2000,120.74,15.20],
-["N15","Puning Hot Spring","Hot spring soak and the sand spa","2h",3000,120.48,15.22],
-["N16","Capas National Shrine","Walk the memorial, learn the Death March story","2h",2000,120.55,15.35],
-["N17","Minalungao National Park","Raft the green river, climb the 1,000 steps","2.5h",2500,121.15,15.42],
-["N18","Camp Pangatian Shrine","War memorial visit plus Cabanatuan longganisa","2.5h",2000,120.98,15.48],
-["N19","Mt. Pinatubo Jump-off","4x4 ride and the crater lake trek","2.5h",3000,120.45,15.38],
-["N20","Monasterio de Tarlac","Sunrise at the viewdeck and the relic chapel","2.5h",2500,120.47,15.48],
-["N21","Isdaan, Gerona","Smash plates at the Tacsiyapo wall, floating lunch","2.5h",2500,120.60,15.61],
-["N22","Aquino Center, Tarlac City","Museum date, then Tarlac iniruban cake","2.5h",2000,120.59,15.48],
-["N23","Dupinga River, Gabaldon","Riverside picnic on the boulders","3.5h",3000,121.33,15.45],
-["N24","Pantabangan Dam","Lake viewpoint and the Canili road","3.5h",3000,121.14,15.80],
-["N25","Manaoag Church","Pilgrimage visit, bagoong and tupig pasalubong","3.5h",3000,120.49,16.04],
-["N26","Tayug Sunflower Maze","Walk the maze, sunflower photos (seasonal)","3.5h",2800,120.75,16.02],
-["N27","Lingayen Beach & Capitol","Beach walk and the old capitol grounds","4h",3000,120.23,16.02],
-["N28","Hundred Islands, Alaminos","Island hopping boat tour","4h",3000,119.98,16.20],
+["N1","Angat Dam Viewpoint","Picnic breakfast at the spillway view","1h",1500,121.16,14.91,"Angat Dam Viewpoint, Norzagaray, Bulacan, Philippines"],
+["N2","Bustos Dam","Sunset walk on the dam, dinner in Baliuag","1h",1500,120.92,14.95,"Bustos Dam, Bulacan, Philippines"],
+["N3","Candaba Viaduct & Swamp","Sunrise birdwatching, then Candaba pancit","1h",1500,120.83,15.09,"Candaba Viaduct and Swamp, Pampanga, Philippines"],
+["N4","Barasoain Church, Malolos","Heritage walk plus a Malolos food crawl","1h",1500,120.8125,14.8433,"Barasoain Church, Malolos, Philippines"],
+["N5","Biak-na-Bato","River cave trek and a swim at Bayukbok","1.5h",1500,121.03,15.1,"Biak-na-Bato National Park, San Miguel, Philippines"],
+["N6","Doña Remedios Trinidad Road","Ride the twisties, roadside lunch at a viewpoint","1.5h",1500,121.1,15,"Doña Remedios Trinidad Road, Bulacan, Philippines"],
+["N7","Sibul Springs","Soak in the old sulfur spring","1.5h",1500,121,15.13,"Sibul Springs, San Miguel, Philippines"],
+["N8","Madlum River & Cave","Cross the river, explore the cave, swim","1.5h",1800,121.02,15.14,"Madlum River and Cave, San Miguel, Philippines"],
+["N9","San Guillermo Church, Bacolor","See the half-buried church, then Pampanga sisig","1.5h",2000,120.65,15,"San Guillermo Church, Bacolor, Philippines"],
+["N10","Betis Church, Guagua","Look up at the painted ceiling, visit a furniture shop","1.5h",2000,120.63,14.97,"Betis Church, Guagua, Philippines"],
+["N11","Clark Sunset Valley","Sunset picnic on the parade grounds","1.5h",1800,120.54,15.18,"Clark Sunset Valley, Pampanga, Philippines"],
+["N12","San Fernando Lantern Workshops","Try making a parol together","1.5h",2000,120.69,15.03,"San Fernando Lantern Workshops, Philippines"],
+["N13","Verdivia Falls, DRT","Trek in and swim under the falls","2h",1800,121.13,15.02,"Verdivia Falls, Doña Remedios Trinidad, Philippines"],
+["N14","Mt. Arayat National Park","Short trail to the falls, picnic lunch","2h",2000,120.74,15.2,"Mt. Arayat National Park, Pampanga, Philippines"],
+["N15","Puning Hot Spring","Hot spring soak and the sand spa","2h",3000,120.48,15.22,"Puning Hot Spring, Sapangbato, Philippines"],
+["N16","Capas National Shrine","Walk the memorial, learn the Death March story","2h",2000,120.5697,15.3239,"Capas National Shrine, Tarlac, Philippines"],
+["N17","Minalungao National Park","Raft the green river, climb the 1,000 steps","2.5h",2500,121.15,15.42,"Minalungao National Park, Gen. Tinio, N. Ecija, Philippines"],
+["N18","Camp Pangatian Shrine","War memorial visit plus Cabanatuan longganisa","2.5h",2000,120.98,15.48,"Camp Pangatian Shrine, Cabanatuan, Philippines"],
+["N19","Mt. Pinatubo Jump-off","4x4 ride and the crater lake trek","2.5h",3000,120.45,15.38,"Mt. Pinatubo Jump-off, Capas, Philippines"],
+["N20","Monasterio de Tarlac","Sunrise at the viewdeck and the relic chapel","2.5h",2500,120.47,15.48,"Monasterio de Tarlac, San Jose, Philippines"],
+["N21","Isdaan, Gerona","Smash plates at the Tacsiyapo wall, floating lunch","2.5h",2500,120.6,15.61,"Isdaan Floating Restaurant, Gerona, Philippines"],
+["N22","Aquino Center, Tarlac City","Museum date, then Tarlac iniruban cake","2.5h",2000,120.59,15.48,"Aquino Center and Museum, Tarlac City, Philippines"],
+["N23","Dupinga River, Gabaldon","Riverside picnic on the boulders","3.5h",3000,121.33,15.45,"Dupinga River, Gabaldon, N. Ecija, Philippines"],
+["N24","Pantabangan Dam","Lake viewpoint and the Canili road","3.5h",3000,121.14,15.8,"Pantabangan Dam, Nueva Ecija, Philippines"],
+["N25","Manaoag Church","Pilgrimage visit, bagoong and tupig pasalubong","3.5h",3000,120.4869,16.0447,"Manaoag Church, Pangasinan, Philippines"],
+["N26","Tayug Sunflower Maze","Walk the maze, sunflower photos (seasonal)","3.5h",2800,120.75,16.02,"Tayug Sunflower Maze, Pangasinan, Philippines"],
+["N27","Lingayen Beach & Capitol","Beach walk and the old capitol grounds","4h",3000,120.23,16.02,"Lingayen Beach and Capitol, Pangasinan, Philippines"],
+["N28","Hundred Islands, Alaminos","Island hopping boat tour","4h",3000,119.9192,16.1917,"Hundred Islands, Alaminos, Pangasinan, Philippines"],
 
-["W1","Subic Bay Boardwalk","Waterfront dinner and the Subic lighthouse","2h",2000,120.28,14.82],
-["W2","Zoobic Safari","Tiger safari and the animal encounters","2h",3000,120.26,14.83],
-["W3","Ocean Adventure, Subic","Dolphin show and the open-water park","2h",3000,120.25,14.79],
-["W4","Balanga Wetland & Nature Park","Birdwatching from the viewing tower","2.5h",2000,120.53,14.68],
-["W5","Abucay Church","Visit the oldest church in Bataan","2.5h",2000,120.53,14.72],
-["W6","Mt. Samat Shrine","Ride the elevator up the memorial cross","2.5h",2500,120.49,14.66],
-["W7","Dunsulan Falls, Pilar","Falls picnic and a swim","2.5h",2200,120.47,14.64],
-["W8","El Kabayo Falls, Subic","Horseback ride to the falls","2.5h",2500,120.31,14.80],
-["W9","Triboa Bay Mangrove Park","Kayak through the mangrove channels","2.5h",2200,120.29,14.78],
-["W10","Las Casas Filipinas, Bagac","Heritage house tour in period costume","3h",3000,120.39,14.60],
-["W11","Bagac to Mariveles Coast Road","Coastal ride with stops at every cove view","3h",2500,120.42,14.52],
-["W12","Five Fingers Coves, Mariveles","Boat out to the hidden coves","3h",3000,120.50,14.43],
-["W13","Pawikan Center, Morong","Release baby sea turtles (Nov to Feb)","3h",2800,120.27,14.68],
-["W14","Subic to Iba Coastal Highway","Sunset ride along the whole Zambales coast","3h",2500,120.09,15.10],
-["W15","Pundaquit, San Antonio","Boat across to Anawangin Cove","3h",3000,120.07,14.94],
-["W16","Capones & Camara Viewpoint","Boat to the old Spanish lighthouse","3h",3000,120.03,14.95],
-["W17","Nagsasa Cove","Cove day trip with the agoho trees","3.5h",3000,120.05,14.87],
-["W18","Liwliwa, San Felipe","Beginner surf lesson together","3.5h",3000,120.07,15.05],
-["W19","Crystal Beach, San Narciso","Beach day and a surf session","3.5h",3000,120.07,15.11],
-["W20","Bucao Lahar Plains, Botolan","Ride the lahar landscape, moon-surface photos","3.5h",2800,120.02,15.30],
-["W21","Iba Town & Mango Farms","Market date, mangoes straight from the farm","3.5h",2500,119.98,15.33],
-["W22","Potipot Island, Candelaria","Short boat crossing, walk the whole island","4h",3000,119.92,15.57],
+["W1","Subic Bay Boardwalk","Waterfront dinner and the Subic lighthouse","2h",2000,120.28,14.82,"Subic Bay Boardwalk, Zambales, Philippines"],
+["W2","Zoobic Safari","Tiger safari and the animal encounters","2h",3000,120.26,14.83,"Zoobic Safari, Subic, Philippines"],
+["W3","Ocean Adventure, Subic","Dolphin show and the open-water park","2h",3000,120.25,14.79,"Ocean Adventure, Subic, Philippines"],
+["W4","Balanga Wetland & Nature Park","Birdwatching from the viewing tower","2.5h",2000,120.53,14.68,"Balanga Wetland and Nature Park, Bataan, Philippines"],
+["W5","Abucay Church","Visit the oldest church in Bataan","2.5h",2000,120.53,14.72,"Abucay Church, Bataan, Philippines"],
+["W6","Mt. Samat Shrine","Ride the elevator up the memorial cross","2.5h",2500,120.4869,14.6647,"Mt. Samat Shrine, Pilar, Philippines"],
+["W7","Dunsulan Falls, Pilar","Falls picnic and a swim","2.5h",2200,120.47,14.64,"Dunsulan Falls, Pilar, Philippines"],
+["W8","El Kabayo Falls, Subic","Horseback ride to the falls","2.5h",2500,120.31,14.8,"El Kabayo Falls, Subic, Philippines"],
+["W9","Triboa Bay Mangrove Park","Kayak through the mangrove channels","2.5h",2200,120.29,14.78,"Triboa Bay Mangrove Park, Subic, Philippines"],
+["W10","Las Casas Filipinas, Bagac","Heritage house tour in period costume","3h",3000,120.3867,14.5847,"Las Casas Filipinas, Bagac, Philippines"],
+["W11","Bagac to Mariveles Coast Road","Coastal ride with stops at every cove view","3h",2500,120.42,14.52,"Bagac to Mariveles Coastal Road, Philippines"],
+["W12","Five Fingers Coves, Mariveles","Boat out to the hidden coves","3h",3000,120.5,14.43,"Five Fingers Coves Viewpoint, Mariveles, Philippines"],
+["W13","Pawikan Center, Morong","Release baby sea turtles (Nov to Feb)","3h",2800,120.27,14.68,"Pawikan Conservation Center, Morong, Philippines"],
+["W14","Subic to Iba Coastal Highway","Sunset ride along the whole Zambales coast","3h",2500,120.09,15.1,"Subic to Iba Coastal Highway, Philippines"],
+["W15","Pundaquit, San Antonio","Boat across to Anawangin Cove","3h",3000,120.07,14.94,"Pundaquit, San Antonio, Philippines"],
+["W16","Capones & Camara Viewpoint","Boat to the old Spanish lighthouse","3h",3000,120.03,14.95,"Capones and Camara Viewpoint, San Antonio, Philippines"],
+["W17","Nagsasa Cove","Cove day trip with the agoho trees","3.5h",3000,120.05,14.87,"Nagsasa Cove, San Antonio, Philippines"],
+["W18","Liwliwa, San Felipe","Beginner surf lesson together","3.5h",3000,120.07,15.05,"Liwliwa, San Felipe, Philippines"],
+["W19","Crystal Beach, San Narciso","Beach day and a surf session","3.5h",3000,120.07,15.11,"Crystal Beach, San Narciso, Philippines"],
+["W20","Bucao Lahar Plains, Botolan","Ride the lahar landscape, moon-surface photos","3.5h",2800,120.02,15.3,"Bucao River Lahar Plains, Botolan, Philippines"],
+["W21","Iba Town & Mango Farms","Market date, mangoes straight from the farm","3.5h",2500,119.98,15.33,"Iba Town and Mango Farms, Zambales, Philippines"],
+["W22","Potipot Island, Candelaria","Short boat crossing, walk the whole island","4h",3000,119.92,15.57,"Potipot Island, Candelaria, Philippines"],
 
-["E1","Hinulugang Taktak, Antipolo","Park walk, then Antipolo suman and mangga","1h",1500,121.18,14.60],
-["E2","Cloud 9, Antipolo","Hanging bridge and the city lights at dusk","1h",1500,121.21,14.61],
-["E3","Boso-Boso Church Ruins","Explore the old church and the quiet grounds","1.5h",1500,121.25,14.63],
-["E4","Marilaque Riders' Stops","Breakfast crawl through the famous stops","1.5h",1500,121.28,14.62],
-["E5","Angono Petroglyphs","Ancient rock carvings and the Angono galleries","1.5h",1800,121.16,14.52],
-["E6","Morong Church, Rizal","Baroque heritage church and the town plaza","1.5h",1500,121.24,14.51],
-["E7","Binangonan Lakeshore","Lake sunset with Talim Island across the water","1.5h",1500,121.19,14.46],
-["E8","Wawa Dam & Gorge","Swim in the gorge between the cliffs","1.5h",1800,121.19,14.73],
-["E9","Mt. Purro Nature Reserve","Day pass, hammocks and the river","1.5h",2500,121.23,14.66],
-["E10","Pililla Wind Farm","Sunset under the turbines","2h",1500,121.32,14.48],
-["E11","Regina RICA, Tanay","Climb to the 71-foot statue, walk the gardens","2h",1800,121.34,14.58],
-["E12","Daranak & Batlag Falls","Swim at both falls in one trip","2h",2000,121.35,14.56],
-["E13","Treasure Mountain, Tanay","Camp deck view over the Sierra Madre","2h",2000,121.37,14.60],
-["E14","Sierra Madre Viewdecks","Café date on the ridge with the valley view","2h",2000,121.39,14.63],
-["E15","Masungi Georeserve","Discovery Trail (book weeks ahead)","2h",3000,121.30,14.59],
-["E16","Mt. Sembrano, Pililla","Half-day hike with the Laguna Lake view","2h",2000,121.31,14.43],
-["E17","Tanay Adventure Camp","Zipline and rope course together","2.5h",2500,121.33,14.54],
-["E18","Tinipak River, Daraitan","White rock formations and the cold river","2.5h",2500,121.44,14.68],
-["E19","Kinabuan Falls, Tanay","Trek in through the rice fields to the falls","2.5h",2200,121.41,14.65],
-["E20","Laiban to Daraitan Backroad","Offbeat ride through the Sierra Madre foothills","2.5h",2000,121.42,14.71],
-["E21","Jala-Jala Peninsula Loop","Ride the whole lakeside loop","2.5h",2000,121.33,14.35],
-["E22","Real, Quezon","Where Marilaque finally meets the sea","3h",2500,121.61,14.66],
-["E23","Dinahican Fish Port, Infanta","Sunrise at the port, cook your own seafood haul","3.5h",2800,121.68,14.73],
-["E24","Agos River, General Nakar","River picnic and a swim","3.5h",2800,121.56,14.78],
-["E25","Umiray River Mouth","Remote coast where the river meets the Pacific","4h",3000,121.59,15.00],
+["E1","Hinulugang Taktak, Antipolo","Park walk, then Antipolo suman and mangga","1h",1500,121.1789,14.6014,"Hinulugang Taktak, Antipolo, Philippines"],
+["E2","Cloud 9, Antipolo","Hanging bridge and the city lights at dusk","1h",1500,121.21,14.61,"Cloud 9, Antipolo, Philippines"],
+["E3","Boso-Boso Church Ruins","Explore the old church and the quiet grounds","1.5h",1500,121.25,14.63,"Boso-Boso Church Ruins, Antipolo, Philippines"],
+["E4","Marilaque Riders' Stops","Breakfast crawl through the famous stops","1.5h",1500,121.28,14.62,"Marilaque Highway Riders' Stops, Philippines"],
+["E5","Angono Petroglyphs","Ancient rock carvings and the Angono galleries","1.5h",1800,121.16,14.52,"Angono Petroglyphs, Rizal, Philippines"],
+["E6","Morong Church, Rizal","Baroque heritage church and the town plaza","1.5h",1500,121.24,14.51,"Morong Church, Rizal, Philippines"],
+["E7","Binangonan Lakeshore","Lake sunset with Talim Island across the water","1.5h",1500,121.19,14.46,"Binangonan Lakeshore, Rizal, Philippines"],
+["E8","Wawa Dam & Gorge","Swim in the gorge between the cliffs","1.5h",1800,121.19,14.73,"Wawa Dam and Gorge, Rodriguez, Philippines"],
+["E9","Mt. Purro Nature Reserve","Day pass, hammocks and the river","1.5h",2500,121.23,14.66,"Mt. Purro Nature Reserve, Antipolo, Philippines"],
+["E10","Pililla Wind Farm","Sunset under the turbines","2h",1500,121.3175,14.4761,"Pililla Wind Farm, Rizal, Philippines"],
+["E11","Regina RICA, Tanay","Climb to the 71-foot statue, walk the gardens","2h",1800,121.34,14.58,"Regina RICA, Tanay, Philippines"],
+["E12","Daranak & Batlag Falls","Swim at both falls in one trip","2h",2000,121.35,14.56,"Daranak and Batlag Falls, Tanay, Philippines"],
+["E13","Treasure Mountain, Tanay","Camp deck view over the Sierra Madre","2h",2000,121.37,14.6,"Treasure Mountain, Tanay, Philippines"],
+["E14","Sierra Madre Viewdecks","Café date on the ridge with the valley view","2h",2000,121.39,14.63,"Sierra Madre Viewdecks, Tanay, Philippines"],
+["E15","Masungi Georeserve","Discovery Trail (book weeks ahead)","2h",3000,121.3403,14.6183,"Masungi Georeserve, Baras, Philippines"],
+["E16","Mt. Sembrano, Pililla","Half-day hike with the Laguna Lake view","2h",2000,121.31,14.43,"Mt. Sembrano Viewpoint, Pililla, Philippines"],
+["E17","Tanay Adventure Camp","Zipline and rope course together","2.5h",2500,121.33,14.54,"Tanay Adventure Camp, Philippines"],
+["E18","Tinipak River, Daraitan","White rock formations and the cold river","2.5h",2500,121.44,14.68,"Tinipak River, Daraitan, Philippines"],
+["E19","Kinabuan Falls, Tanay","Trek in through the rice fields to the falls","2.5h",2200,121.41,14.65,"Kinabuan Falls, Tanay, Philippines"],
+["E20","Laiban to Daraitan Backroad","Offbeat ride through the Sierra Madre foothills","2.5h",2000,121.42,14.71,"Laiban to Daraitan Backroad, Philippines"],
+["E21","Jala-Jala Peninsula Loop","Ride the whole lakeside loop","2.5h",2000,121.33,14.35,"Jala-Jala Peninsula Loop, Rizal, Philippines"],
+["E22","Real, Quezon","Where Marilaque finally meets the sea","3h",2500,121.61,14.66,"Real, Quezon, Philippines"],
+["E23","Dinahican Fish Port, Infanta","Sunrise at the port, cook your own seafood haul","3.5h",2800,121.68,14.73,"Dinahican Fish Port, Infanta, Philippines"],
+["E24","Agos River, General Nakar","River picnic and a swim","3.5h",2800,121.56,14.78,"Agos River, General Nakar, Philippines"],
+["E25","Umiray River Mouth","Remote coast where the river meets the Pacific","4h",3000,121.59,15,"Umiray River Mouth, General Nakar, Philippines"],
 
-["S1","Aguinaldo Shrine, Kawit","Tour the independence house, then Cavite bibingka","2h",2000,120.90,14.44],
-["S2","Balite Falls, Amadeo","Swim under the falls","2.5h",2000,120.93,14.18],
-["S3","Amadeo Coffee Farms","Coffee farm tour and tasting","2.5h",2200,120.90,14.15],
-["S4","Rizal Shrine, Calamba","Rizal's house, then Calamba buko pie","2.5h",2000,121.16,14.21],
-["S5","Los Baños Hot Springs","Hot spring soak for the afternoon","2.5h",2500,121.22,14.17],
-["S6","Tagaytay Ridge","Bulalo lunch with the Taal view","3h",2500,120.94,14.11],
-["S7","Kaybiang Tunnel","Ride the tunnel and the whole coastal road","3h",2500,120.65,14.24],
-["S8","Caleruega Church, Nasugbu","Garden chapel and the hilltop view","3h",2500,120.83,14.06],
-["S9","Mt. Batulao Viewpoint","Sunrise hike up the ridge","3h",2500,120.80,14.03],
-["S10","Taal Heritage Town","Ancestral houses, the basilica, tapa and longganisa","3h",2500,120.92,13.88],
-["S11","Talisay Lakeshore","Kayak on Taal Lake, volcano from below","3h",2800,121.02,14.09],
-["S12","Patungan Cove, Maragondon","Descend to the hidden black sand cove","3h",2800,120.68,14.24],
-["S13","Nagcarlan Underground Cemetery","Explore the historic underground crypt","3h",2200,121.41,14.13],
-["S14","Liliw, Laguna","Tsinelas shopping and the red brick church","3h",2200,121.44,14.13],
-["S15","Paete, Laguna","Woodcarving workshop, carve something together","3h",2200,121.48,14.36],
-["S16","Pico de Loro, Hamilo","Trek to the monolith viewpoint","3.5h",3000,120.66,14.20],
-["S17","Anilao, Mabini","Snorkeling over the coral gardens","3.5h",3000,120.88,13.73],
-["S18","Taytay Falls, Majayjay","Swim in the cold mountain pool","3.5h",2500,121.47,14.15],
-["S19","Lake Caliraya, Cavinti","Kayak or paddleboard on the lake","3.5h",2800,121.51,14.28],
-["S20","Pagsanjan & Cavinti Falls","Bangka ride shooting the rapids","3.5h",3000,121.45,14.27],
-["S21","Lucban & Kamay ni Hesus","Climb the hill, then pancit habhab","3.5h",2800,121.55,14.11],
-["S22","Laiya, San Juan","Full beach day","4h",3000,121.40,13.68],
-["S23","Burot Beach, Calatagan","Beach camp and a sunset swim","4h",3000,120.63,13.85],
-["S24","Lobo Coastal Road","Rough but stunning coastal ride","4h",3000,121.22,13.65],
-["S25","Atimonan Zigzag Road","Ride the Bitukang Manok through the national park","4h",3000,121.92,14.00]
+["S1","Aguinaldo Shrine, Kawit","Tour the independence house, then Cavite bibingka","2h",2000,120.9,14.44,"Aguinaldo Shrine, Kawit, Cavite, Philippines"],
+["S2","Balite Falls, Amadeo","Swim under the falls","2.5h",2000,120.93,14.18,"Balite Falls, Amadeo, Cavite, Philippines"],
+["S3","Amadeo Coffee Farms","Coffee farm tour and tasting","2.5h",2200,120.9,14.15,"Amadeo Coffee Farms, Cavite, Philippines"],
+["S4","Rizal Shrine, Calamba","Rizal's house, then Calamba buko pie","2.5h",2000,121.16,14.21,"Rizal Shrine, Calamba, Laguna, Philippines"],
+["S5","Los Baños Hot Springs","Hot spring soak for the afternoon","2.5h",2500,121.22,14.17,"Los Baños Hot Springs, Laguna, Philippines"],
+["S6","Tagaytay Ridge","Bulalo lunch with the Taal view","3h",2500,120.9621,14.1153,"Tagaytay Ridge, Cavite, Philippines"],
+["S7","Kaybiang Tunnel","Ride the tunnel and the whole coastal road","3h",2500,120.65,14.24,"Kaybiang Tunnel, Ternate to Nasugbu, Philippines"],
+["S8","Caleruega Church, Nasugbu","Garden chapel and the hilltop view","3h",2500,120.83,14.06,"Caleruega Church, Nasugbu, Philippines"],
+["S9","Mt. Batulao Viewpoint","Sunrise hike up the ridge","3h",2500,120.8,14.03,"Mt. Batulao Viewpoint, Nasugbu, Philippines"],
+["S10","Taal Heritage Town","Ancestral houses, the basilica, tapa and longganisa","3h",2500,120.9233,13.8789,"Taal Heritage Town, Batangas, Philippines"],
+["S11","Talisay Lakeshore","Kayak on Taal Lake, volcano from below","3h",2800,121.02,14.09,"Talisay Lakeshore, Batangas, Philippines"],
+["S12","Patungan Cove, Maragondon","Descend to the hidden black sand cove","3h",2800,120.68,14.24,"Patungan Cove, Maragondon, Cavite, Philippines"],
+["S13","Nagcarlan Underground Cemetery","Explore the historic underground crypt","3h",2200,121.41,14.13,"Nagcarlan Underground Cemetery, Laguna, Philippines"],
+["S14","Liliw, Laguna","Tsinelas shopping and the red brick church","3h",2200,121.44,14.13,"Liliw, Laguna, Philippines"],
+["S15","Paete, Laguna","Woodcarving workshop, carve something together","3h",2200,121.48,14.36,"Paete, Laguna, Philippines"],
+["S16","Pico de Loro, Hamilo","Trek to the monolith viewpoint","3.5h",3000,120.66,14.2,"Pico de Loro, Hamilo Coast, Philippines"],
+["S17","Anilao, Mabini","Snorkeling over the coral gardens","3.5h",3000,120.88,13.73,"Anilao, Mabini, Batangas, Philippines"],
+["S18","Taytay Falls, Majayjay","Swim in the cold mountain pool","3.5h",2500,121.47,14.15,"Taytay Falls, Majayjay, Laguna, Philippines"],
+["S19","Lake Caliraya, Cavinti","Kayak or paddleboard on the lake","3.5h",2800,121.51,14.28,"Lake Caliraya, Cavinti, Laguna, Philippines"],
+["S20","Pagsanjan & Cavinti Falls","Bangka ride shooting the rapids","3.5h",3000,121.45,14.27,"Pagsanjan and Cavinti Falls, Laguna, Philippines"],
+["S21","Lucban & Kamay ni Hesus","Climb the hill, then pancit habhab","3.5h",2800,121.55,14.11,"Lucban and Kamay ni Hesus, Quezon, Philippines"],
+["S22","Laiya, San Juan","Full beach day","4h",3000,121.4,13.68,"Laiya, San Juan, Batangas, Philippines"],
+["S23","Burot Beach, Calatagan","Beach camp and a sunset swim","4h",3000,120.63,13.85,"Burot Beach, Calatagan, Batangas, Philippines"],
+["S24","Lobo Coastal Road","Rough but stunning coastal ride","4h",3000,121.22,13.65,"Lobo Coastal Road, Batangas, Philippines"],
+["S25","Atimonan Zigzag Road","Ride the Bitukang Manok through the national park","4h",3000,121.8756,14.0086,"Atimonan Zigzag Road, Quezon, Philippines"]
 ];
 
 const BY_CODE = {};
@@ -600,7 +615,20 @@ const LAGUNA=[
 [121.02,14.47],[121.11,14.55],[121.22,14.58],[121.33,14.53],[121.40,14.42],[121.42,14.29],[121.35,14.19],
 [121.27,14.18],[121.21,14.29],[121.15,14.33],[121.09,14.28],[121.02,14.32],[120.99,14.40]
 ];
+// ---------- home base ----------
+// Ride origin. Drop a pin on Bloomers Apartment in Google Maps, copy the
+// "14.7601, 121.0450" pair it shows, and paste it here as [lon, lat] —
+// note Google prints lat first, this array takes lon first.
 const HOME=[121.045,14.760];
+const HOME_LABEL="Bloomers Apartment, Camarin";
+
+// Road routing runs in the visitor's browser, not at build time. OSRM's public
+// demo server is keyless and CORS-open; it profiles a car, so we show its road
+// DISTANCE (reliable) and leave the two-up ride time to the hand-authored
+// estimate rather than passing car duration off as motorcycle duration.
+const ROUTER = lonlat =>
+  `https://router.project-osrm.org/route/v1/driving/${HOME[0]},${HOME[1]};${lonlat[0]},${lonlat[1]}`
+  + `?overview=full&geometries=geojson`;
 
 const toPath = a => a.map((p,i)=>(i?"L":"M")+px(p[0]).toFixed(1)+","+py(p[1]).toFixed(1)).join(" ")+" Z";
 document.getElementById("coast").setAttribute("d", toPath(COAST));
@@ -745,6 +773,88 @@ function clearSpotlight(){
   document.getElementById("mapbox").classList.remove("spotlight");
 }
 
+// ---------- routes ----------
+const RKEY="backride:routes:v1";
+let routes={};      // code -> {d:metres, g:[[lon,lat],...]} | {failed:true}
+let routeReq=0;     // guards against a slow fetch overwriting a newer selection
+
+try{ routes=JSON.parse(localStorage.getItem(RKEY))||{}; }catch(e){ routes={}; }
+function saveRoutes(){
+  try{ localStorage.setItem(RKEY, JSON.stringify(routes)); }catch(e){}
+}
+
+const R=6371; const rad=x=>x*Math.PI/180;
+function haversine(a,b){  // [lon,lat] pairs -> km
+  const dLat=rad(b[1]-a[1]), dLon=rad(b[0]-a[0]);
+  const s=Math.sin(dLat/2)**2 + Math.cos(rad(a[1]))*Math.cos(rad(b[1]))*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(s));
+}
+function bearing(a,b){
+  const y=Math.sin(rad(b[0]-a[0]))*Math.cos(rad(b[1]));
+  const x=Math.cos(rad(a[1]))*Math.sin(rad(b[1])) - Math.sin(rad(a[1]))*Math.cos(rad(b[1]))*Math.cos(rad(b[0]-a[0]));
+  return (Math.atan2(y,x)*180/Math.PI+360)%360;
+}
+const COMPASS=["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+const compassOf=deg=>COMPASS[Math.round(deg/22.5)%16];
+
+// Douglas-Peucker, so a 2,000-point OSRM geometry stores and draws as ~100.
+function simplify(pts, tol){
+  if(pts.length<3) return pts;
+  const keep=new Array(pts.length).fill(false);
+  keep[0]=keep[pts.length-1]=true;
+  const stack=[[0,pts.length-1]];
+  while(stack.length){
+    const [i,j]=stack.pop();
+    let far=-1, fd=0;
+    const [x1,y1]=pts[i], [x2,y2]=pts[j];
+    const dx=x2-x1, dy=y2-y1, len=Math.hypot(dx,dy)||1e-12;
+    for(let k=i+1;k<j;k++){
+      const d=Math.abs(dy*pts[k][0]-dx*pts[k][1]+x2*y1-y2*x1)/len;
+      if(d>fd){ fd=d; far=k; }
+    }
+    if(fd>tol && far>0){ keep[far]=true; stack.push([i,far],[far,j]); }
+  }
+  return pts.filter((_,i)=>keep[i]);
+}
+
+function drawRoute(i){
+  const g=document.getElementById("routeg");
+  if(i===null){ g.innerHTML=""; return; }
+  const d=P[i], code=d[0], c=DIRS[code[0]].color, r=routes[code];
+  const pts = (r && r.g && r.g.length) ? r.g : [[HOME[0],HOME[1]],[d[5],d[6]]];
+  const direct = !(r && r.g && r.g.length);
+  const path = pts.map((p,n)=>(n?"L":"M")+px(p[0]).toFixed(1)+","+py(p[1]).toFixed(1)).join(" ");
+  // The draw-on animation drives stroke-dashoffset, which fights the dashed
+  // fallback's own dasharray — so only real road lines get it.
+  const anim = (reduce || direct) ? "" : " routedraw";
+  g.innerHTML=
+    `<path class="routeglow" d="${path}"/>`+
+    `<path class="routeline${direct?" direct":""}${anim}" d="${path}" stroke="${c}"/>`;
+}
+
+// Ask OSRM for the real road line. Silent, best-effort: if the request fails
+// (offline, blocked, rate-limited) the card keeps the honest direct-line figure.
+async function fetchRoute(i){
+  const d=P[i], code=d[0];
+  if(routes[code]) return;                       // cached hit or known failure
+  const mine=++routeReq;
+  try{
+    const ctl=new AbortController();
+    const to=setTimeout(()=>ctl.abort(), 8000);
+    const res=await fetch(ROUTER([d[5],d[6]]), {signal:ctl.signal});
+    clearTimeout(to);
+    if(!res.ok) throw new Error("http "+res.status);
+    const j=await res.json();
+    const rt=j.routes && j.routes[0];
+    if(!rt || !rt.geometry) throw new Error("no route");
+    routes[code]={ d: rt.distance, g: simplify(rt.geometry.coordinates, 0.002) };
+  }catch(e){
+    routes[code]={ failed:true };
+  }
+  saveRoutes();
+  if(mine===routeReq && sel===i){ drawRoute(i); renderCard(); }
+}
+
 // ---------- render ----------
 function render(){
   document.querySelectorAll(".pin").forEach(el=>{
@@ -762,6 +872,8 @@ function render(){
 
   const ridden=Object.values(log).filter(e=>e.status==="ridden").length;
   const picked=Object.values(log).filter(e=>e.status==="picked").length;
+  drawRoute(sel);
+  if(sel!==null) fetchRoute(sel);
   document.getElementById("tallyN").textContent=ridden;
   document.getElementById("dashBadge").textContent = (ridden+picked) ? `${ridden}/${ridden+picked}` : "";
 
@@ -828,13 +940,29 @@ function renderCard(){
     </div>`;
   }
 
+  // Distance: road figure once OSRM answers, otherwise the honest direct line.
+  const d=P[sel], r=routes[code];
+  const km=haversine(HOME,[d[5],d[6]]);
+  const dirLabel=compassOf(bearing(HOME,[d[5],d[6]]));
+  let distV;
+  if(r && r.d)          distV=`${Math.round(r.d/1000)} km by road <span class="sub3">· ${dirLabel}</span>`;
+  else if(r && r.failed) distV=`${Math.round(km)} km direct line <span class="sub3">· ${dirLabel} · road route unavailable</span>`;
+  else                   distV=`${Math.round(km)} km direct line <span class="sub3">· ${dirLabel} · checking roads…</span>`;
+
+  const nav=`https://www.google.com/maps/dir/?api=1`
+    + `&origin=${encodeURIComponent(HOME[1]+","+HOME[0])}`
+    + `&destination=${encodeURIComponent(d[7])}`
+    + `&travelmode=two-wheeler`;
+
   inner.innerHTML=`
     ${badge}
     <p class="dir" style="color:${c}">${code} &nbsp;·&nbsp; ${DIRS[dir].name}</p>
     <h2>${name}</h2>
     <div class="row"><span class="k">Activity</span><span class="v">${act}</span></div>
     <div class="row"><span class="k">Ride</span><span class="v">${ride} one way from Camarin</span></div>
+    <div class="row"><span class="k">Distance</span><span class="v">${distV}</span></div>
     <div class="row"><span class="k">Budget</span><span class="v budget" style="color:${c}">₱${bud.toLocaleString()}</span></div>
+    <a class="btn nav" href="${nav}" target="_blank" rel="noopener noreferrer">Ride directions ↗</a>
     ${rating}
     ${actions}`;
 }
