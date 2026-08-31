@@ -7,7 +7,7 @@
 <meta name="description" content="Backride Dates: 100 motorcycle date destinations within a day's ride of Camarin, North Caloocan, plotted on an interactive map of Luzon — with a challenge tracker and rating scoreboard.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Rubik+Bubbles&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
     --sea:#080D14;
@@ -31,9 +31,9 @@
     --surface:#0C141B;
     --star:#FFD666;
     --good:#7CC47F;
+    /* Two families, no exceptions: --disp for every title, label and number,
+       --body for prose. Titles differ by size and tracking, never by face. */
     --disp:"Barlow Condensed", "Oswald", "Haettenschweiler", Impact, sans-serif;
-    /* Groovy bubble face, page title only — the UI stays on Barlow Condensed. */
-    --fun:"Rubik Bubbles", "Baloo 2", "Chewy", "Comic Sans MS", system-ui, sans-serif;
     --body:"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
   *{box-sizing:border-box}
@@ -50,21 +50,44 @@
   .wrap{max-width:1180px;margin:0 auto}
 
   /* ---------- header ---------- */
-  header{border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:14px}
-  .eyebrow{
-    font-family:var(--disp);font-size:13px;letter-spacing:.24em;text-transform:uppercase;
-    color:var(--ink-dim);margin:0 0 6px;display:flex;align-items:center;gap:10px;
+  header{margin-bottom:16px}
+  .masthead{
+    display:flex;gap:28px;align-items:flex-end;justify-content:space-between;
+    padding-bottom:16px;
   }
-  .eyebrow::after{content:"";flex:1;height:1px;background:var(--line)}
+  .eyebrow{
+    font-family:var(--disp);font-size:12px;letter-spacing:.26em;text-transform:uppercase;
+    color:var(--ink-faint);margin:0 0 4px;
+  }
   h1{
-    font-family:var(--fun);font-weight:400;font-size:clamp(34px,6.4vw,58px);
-    line-height:1.04;letter-spacing:.005em;margin:0 0 10px;text-transform:uppercase;
+    font-family:var(--disp);font-weight:700;font-size:clamp(32px,5.4vw,52px);
+    line-height:.95;letter-spacing:-.01em;margin:0 0 8px;text-transform:uppercase;
   }
   h1 em{font-style:normal;color:var(--ink-faint)}
-  .sub{margin:0;color:var(--ink-dim);font-size:14px;max-width:56ch;line-height:1.55}
+  .sub{margin:0;color:var(--ink-dim);font-size:13.5px;max-width:58ch;line-height:1.55}
+
+  /* Progress reads as the headline stat, not a footnote in the toolbar. */
+  .progress{flex:none;width:190px;text-align:right}
+  .progress .t{
+    font-family:var(--disp);font-size:11px;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--ink-faint);margin:0 0 2px;
+  }
+  .progress .n{font-family:var(--disp);line-height:1;display:flex;align-items:baseline;
+    justify-content:flex-end;gap:6px}
+  .progress .n b{font-size:44px;font-weight:700;letter-spacing:-.02em;color:var(--ink)}
+  .progress .n span{font-size:17px;color:var(--ink-faint)}
+  .ptrack{height:5px;background:#111C24;border-radius:3px;overflow:hidden;margin:9px 0 6px;
+    display:flex;gap:2px}
+  .pfill{height:100%;border-radius:3px;transition:width .35s}
+  .pq{margin:0;font-size:11.5px;color:var(--ink-faint);min-height:15px}
+  @media (max-width:720px){
+    .masthead{flex-direction:column;align-items:stretch;gap:16px}
+    .progress{width:auto;text-align:left}
+    .progress .n{justify-content:flex-start}
+  }
 
   /* ---------- view tabs ---------- */
-  .tabs{display:flex;gap:2px;margin-bottom:16px;border-bottom:1px solid var(--line)}
+  .tabs{display:flex;gap:2px;border-bottom:1px solid var(--line)}
   .tab{
     font-family:var(--disp);font-size:16px;letter-spacing:.14em;text-transform:uppercase;
     background:transparent;border:0;border-bottom:2px solid transparent;color:var(--ink-faint);
@@ -78,7 +101,10 @@
   .view[hidden]{display:none}
 
   /* ---------- controls ---------- */
-  .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 14px}
+  .controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center;
+    justify-content:space-between;margin:16px 0 14px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+  .acts{display:flex;gap:8px;align-items:center;flex:none}
   .chip{
     font-family:var(--disp);font-size:15px;letter-spacing:.1em;text-transform:uppercase;
     background:transparent;color:var(--ink-dim);border:1px solid var(--line);
@@ -93,7 +119,6 @@
   .chip[data-dir="E"][aria-pressed="true"]{color:var(--e)}
   .chip[data-dir="S"][aria-pressed="true"]{color:var(--s)}
   .chip .ct{font-size:12px;color:var(--ink-faint)}
-  .spacer{flex:1}
   .spin{
     font-family:var(--disp);font-size:16px;letter-spacing:.14em;text-transform:uppercase;
     background:var(--ink);color:#0A1017;border:0;padding:9px 20px 8px;border-radius:2px;
@@ -104,12 +129,31 @@
   .spin:disabled{opacity:.55;cursor:default;transform:none;background:var(--ink-faint)}
   .spin.alt{background:transparent;color:var(--ink-dim);border:1px solid var(--ink-faint)}
   .spin.alt:hover{background:transparent;color:var(--ink);border-color:var(--ink)}
-  .tally{font-family:var(--disp);font-size:14px;letter-spacing:.12em;color:var(--ink-faint);text-transform:uppercase}
-  .tally b{color:var(--ink);font-weight:600}
 
-  /* ---------- layout ---------- */
-  .grid{display:grid;grid-template-columns:1fr 330px;gap:22px;align-items:start}
-  @media (max-width:860px){.grid{grid-template-columns:1fr}}
+  /* ---------- layout ----------
+     The Luzon extent is genuinely tall (~295km wide by ~352km), so the map
+     column runs long. The rail stacks card over list and sticks, which fills
+     that height with the two things you actually reach for. */
+  .grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
+  .rail{
+    position:sticky;top:16px;display:flex;flex-direction:column;gap:14px;
+    max-height:calc(100vh - 32px);
+  }
+  .listwrap{
+    flex:1;min-height:150px;display:flex;flex-direction:column;
+    border:1px solid var(--line);border-radius:3px;background:var(--surface);overflow:hidden;
+  }
+  .railhead{
+    font-family:var(--disp);font-size:12px;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--ink-faint);margin:0;padding:10px 12px 9px;border-bottom:1px solid var(--line);
+    display:flex;justify-content:space-between;align-items:baseline;flex:none;
+  }
+  @media (max-width:900px){
+    .grid{grid-template-columns:1fr}
+    .rail{position:static;max-height:none}
+    .listwrap{min-height:0}
+    .list{max-height:320px}
+  }
 
   .mapbox{
     position:relative;border:1px solid var(--line);border-radius:3px;
@@ -218,7 +262,7 @@
   /* ---------- date card ---------- */
   .card{
     border:1px solid var(--line);border-radius:3px;background:var(--surface);
-    position:sticky;top:20px;overflow:hidden;
+    overflow:hidden;flex:none;
   }
   .card .band{height:4px;background:var(--ink-faint);transition:.2s}
   .card .inner{padding:18px}
@@ -289,7 +333,7 @@
   .leftover input:focus{border-color:var(--ink-faint);outline:none}
 
   /* ---------- list ---------- */
-  .list{margin-top:14px;border:1px solid var(--line);border-radius:3px;max-height:300px;overflow:auto}
+  .list{flex:1;min-height:0;overflow:auto}
   .list button{
     display:flex;width:100%;gap:9px;align-items:baseline;text-align:left;background:transparent;
     border:0;border-bottom:1px solid var(--line);color:var(--ink-dim);padding:8px 11px;
@@ -371,28 +415,40 @@
 
 <div class="wrap">
 <header>
-  <p class="eyebrow">Backride Dates</p>
-  <h1>The Luzon Map <em>/ 100 Dates</em></h1>
-  <p class="sub">Every destination within a day's ride of Camarin, North Caloocan. Tap a pin for its Date Card, add it to the challenge, then rate it after the ride.</p>
-</header>
+  <div class="masthead">
+    <div>
+      <p class="eyebrow">Backride Dates</p>
+      <h1>The Luzon Map <em>/ 100 Dates</em></h1>
+      <p class="sub">Every destination within a day's ride of Camarin, North Caloocan. Tap a pin for its Date Card, add it to the challenge, then rate it after the ride.</p>
+    </div>
+    <div class="progress">
+      <p class="t">Ridden</p>
+      <div class="n"><b id="tallyN">0</b><span>/ 100</span></div>
+      <div class="ptrack" id="ptrack"></div>
+      <p class="pq" id="pQueued"></p>
+    </div>
+  </div>
 
-<div class="tabs" role="tablist">
-  <button class="tab" id="tabMap" role="tab" aria-selected="true" aria-controls="viewMap">Map</button>
-  <button class="tab" id="tabDash" role="tab" aria-selected="false" aria-controls="viewDash">Scoreboard <span class="badge" id="dashBadge"></span></button>
-</div>
+  <div class="tabs" role="tablist">
+    <button class="tab" id="tabMap" role="tab" aria-selected="true" aria-controls="viewMap">Map</button>
+    <button class="tab" id="tabDash" role="tab" aria-selected="false" aria-controls="viewDash">Scoreboard <span class="badge" id="dashBadge"></span></button>
+  </div>
+</header>
 
 <!-- ============ MAP VIEW ============ -->
 <div class="view" id="viewMap" role="tabpanel" aria-labelledby="tabMap">
   <div class="controls">
-    <button class="chip" data-dir="ALL" aria-pressed="true">All <span class="ct">100</span></button>
-    <button class="chip" data-dir="N" aria-pressed="false"><span class="dot"></span>North <span class="ct">28</span></button>
-    <button class="chip" data-dir="W" aria-pressed="false"><span class="dot"></span>West <span class="ct">22</span></button>
-    <button class="chip" data-dir="E" aria-pressed="false"><span class="dot"></span>East <span class="ct">25</span></button>
-    <button class="chip" data-dir="S" aria-pressed="false"><span class="dot"></span>South <span class="ct">25</span></button>
-    <span class="spacer"></span>
-    <span class="tally"><b id="tallyN">0</b> / 100 ridden</span>
-    <button class="spin alt" id="zoomOut" hidden>Zoom out</button>
-    <button class="spin" id="spin">Spin the map</button>
+    <div class="chips">
+      <button class="chip" data-dir="ALL" aria-pressed="true">All <span class="ct">100</span></button>
+      <button class="chip" data-dir="N" aria-pressed="false"><span class="dot"></span>North <span class="ct">28</span></button>
+      <button class="chip" data-dir="W" aria-pressed="false"><span class="dot"></span>West <span class="ct">22</span></button>
+      <button class="chip" data-dir="E" aria-pressed="false"><span class="dot"></span>East <span class="ct">25</span></button>
+      <button class="chip" data-dir="S" aria-pressed="false"><span class="dot"></span>South <span class="ct">25</span></button>
+    </div>
+    <div class="acts">
+      <button class="spin alt" id="zoomOut" hidden>Zoom out</button>
+      <button class="spin" id="spin">Spin the map</button>
+    </div>
   </div>
 
   <div class="grid">
@@ -421,15 +477,21 @@
         <span><svg class="k" viewBox="-8 -20 16 22"><path d="M0,0 c-4.6,-5.9 -6.8,-9.2 -6.8,-12.5 a6.8,6.8 0 1,1 13.6,0 c0,3.3 -2.2,6.6 -6.8,12.5 z" fill="#7E9198" stroke="#FFD666" stroke-width="1.2"/><path transform="translate(0,-12.5) scale(.8)" d="M0,-4.6 L1.15,-1.58 L4.38,-1.42 L1.86,.6 L2.7,3.72 L0,1.95 L-2.7,3.72 L-1.86,.6 L-4.38,-1.42 L-1.15,-1.58 Z" fill="#FFD666"/></svg> Picked for a challenge</span>
         <span><svg class="k" viewBox="-8 -20 16 22"><path d="M0,0 c-4.6,-5.9 -6.8,-9.2 -6.8,-12.5 a6.8,6.8 0 1,1 13.6,0 c0,3.3 -2.2,6.6 -6.8,12.5 z" fill="#3C4C52"/><circle cx="0" cy="-12.5" r="2.5" fill="#7CC47F"/></svg> Ridden</span>
       </div>
-      <div class="list" id="list"></div>
     </div>
 
-    <div class="card" id="card">
-      <div class="band" id="band"></div>
-      <div class="inner" id="cardInner">
-        <div class="empty">No destination selected.<br><br>Pick a pin on the map, choose from the list, or hit <b style="color:var(--ink-dim)">Spin the map</b> and let it decide your month.</div>
+    <aside class="rail">
+      <div class="card" id="card">
+        <div class="band" id="band"></div>
+        <div class="inner" id="cardInner">
+          <div class="empty">No destination selected.<br><br>Pick a pin on the map, choose from the list, or hit <b style="color:var(--ink-dim)">Spin the map</b> and let it decide your month.</div>
+        </div>
       </div>
-    </div>
+
+      <div class="listwrap">
+        <p class="railhead">Destinations <span id="listCount"></span></p>
+        <div class="list" id="list"></div>
+      </div>
+    </aside>
   </div>
 </div>
 
@@ -879,6 +941,16 @@ function render(){
   document.getElementById("tallyN").textContent=ridden;
   document.getElementById("dashBadge").textContent = (ridden+picked) ? `${ridden}/${ridden+picked}` : "";
 
+  // Header progress: a ridden segment per direction, then the queued remainder.
+  document.getElementById("ptrack").innerHTML =
+    Object.entries(DIRS).map(([k,v])=>{
+      const n=Object.entries(log).filter(([c,e])=>c[0]===k && e.status==="ridden").length;
+      return n ? `<div class="pfill" style="width:${n/100*100}%;background:${v.chart}"></div>` : "";
+    }).join("") +
+    (picked ? `<div class="pfill" style="width:${picked/100*100}%;background:var(--star);opacity:.45"></div>` : "");
+  document.getElementById("pQueued").textContent =
+    picked ? `${picked} picked and still ahead` : (ridden ? "Nothing queued" : "");
+
   renderList();
   renderCard();
   if(view==="dash") renderDash();
@@ -886,6 +958,8 @@ function render(){
 
 function renderList(){
   const rows=P.map((d,i)=>[d,i]).filter(([d])=>filter==="ALL"||d[0][0]===filter);
+  document.getElementById("listCount").textContent =
+    filter==="ALL" ? `${rows.length}` : `${DIRS[filter].name} · ${rows.length}`;
   document.getElementById("list").innerHTML=rows.map(([d,i])=>{
     const st=statusOf(d[0]);
     const mark = st==="picked" ? "★" : st==="ridden" ? "<span style='color:var(--good)'>✓</span>" : "";

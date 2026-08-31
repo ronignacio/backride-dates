@@ -71,7 +71,22 @@ Verifying all 100 against a geocoder would take one pass of a batch script again
 
 ### Typography
 
-The page title uses **Rubik Bubbles** (a rounded groovy display face); the rest of the interface stays on Barlow Condensed so the map furniture keeps its editorial tone. Swapping the title face means changing `--fun` and the Google Fonts URL together.
+Two families, no exceptions: **Barlow Condensed** (`--disp`) for every title, label, number and button, and **Inter** (`--body`) for prose. Titles are distinguished by size, weight and letter-spacing — never by swapping in another face. Adding a third family is the thing to avoid here; the display face plus a size step covers every level of the hierarchy.
+
+| Level | Size | Tracking |
+|---|---|---|
+| Page title | `clamp(32px, 5.4vw, 52px)` / 700 | `-.01em` |
+| Progress figure | 44px / 700 | `-.02em` |
+| Card title | 26px / 600 | `-.005em` |
+| Tab | 16px | `.14em` |
+| Panel + rail heading | 12–13px | `.2em` |
+| Eyebrow | 12px | `.26em` |
+
+### Layout
+
+Luzon's extent here is genuinely tall — roughly 295 km wide by 352 km — so the map column runs long whatever the viewport. The right rail is therefore sticky and stacks the Date Card over the destination list, which fills that height with the two things you actually reach for instead of leaving dead space beside the map. The list flexes to the remaining rail height and scrolls internally.
+
+Progress is a headline stat in the masthead rather than a footnote in the toolbar: the ridden count, a bar segmented by direction colour, and the queued remainder in muted gold. Below 900px the rail unsticks and stacks under the map; below 720px the masthead goes single-column.
 
 ### Chart colours
 
