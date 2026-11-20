@@ -69,6 +69,14 @@ Verifying all 100 against a geocoder would take one pass of a batch script again
 - **The pin halo is `pointer-events:none`.** It is a 13px circle at `opacity:0`; left interactive, it swallows clicks aimed at neighbouring pins in the dense Rizal and Laguna clusters.
 - **The drop-in animation uses `backwards`, never `both`.** A retained final keyframe holds `opacity: 1` at animation precedence, which silently defeats every later opacity rule — both the direction filter's `.dim` and the post-spin spotlight. The class lands on the element and nothing visibly changes.
 
+### Access gate
+
+The page opens behind an access-code screen (`Members only`). The correct code reveals the map and is remembered in `localStorage`, so it is entered once per device. A fresh browser, or one with cleared site data, is gated again.
+
+This is a **soft, client-side lock** — it keeps casual visitors out and stops the preview link being idly opened, but it is **not security**: the code sits in the page source, readable by anyone who opens dev tools or View Source. Fine for a private preview; do not put anything behind it that would actually matter if seen.
+
+To change the code, edit the `CODE` constant in the gate script near the top of `index.html` and redeploy. The stored unlock must match the current code, so rotating it re-locks everyone until they re-enter the new one. For a real lock, Cloudflare Access (Zero Trust) puts an auth screen in front of the Worker at the edge, before any HTML is served.
+
 ### Typography
 
 Two families, no exceptions: **Barlow Condensed** (`--disp`) for every title, label, number and button, and **Inter** (`--body`) for prose. Titles are distinguished by size, weight and letter-spacing — never by swapping in another face. Adding a third family is the thing to avoid here; the display face plus a size step covers every level of the hierarchy.

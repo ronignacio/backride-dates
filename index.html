@@ -406,12 +406,106 @@
     color:var(--ink-faint);font-size:12px;line-height:1.7}
 
   :focus-visible{outline:2px solid var(--n);outline-offset:2px}
+
+  /* ---------- access gate ----------
+     A soft, client-side lock: it keeps casual visitors out and the preview
+     link from being idly opened. It is NOT security — the page is static, so
+     the code is visible to anyone who reads the source. */
+  .gate{
+    position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;
+    padding:24px;background:
+      radial-gradient(1000px 600px at 50% -10%, #12202B 0%, transparent 60%),
+      var(--sea);
+  }
+  .gate[hidden]{display:none}
+  .gatebox{width:100%;max-width:360px;text-align:center}
+  .gate .eyebrow{justify-content:center;margin-bottom:10px}
+  .gate h1{
+    font-family:var(--disp);font-weight:700;font-size:clamp(30px,8vw,44px);line-height:.95;
+    letter-spacing:-.01em;margin:0 0 6px;text-transform:uppercase;
+  }
+  .gate h1 em{font-style:normal;color:var(--ink-faint)}
+  .gate p{color:var(--ink-dim);font-size:13.5px;line-height:1.55;margin:0 0 20px}
+  .gate form{display:flex;flex-direction:column;gap:10px}
+  .gate input{
+    width:100%;background:var(--surface);border:1px solid var(--line);color:var(--ink);
+    font-family:var(--body);font-size:16px;letter-spacing:.02em;text-align:center;
+    padding:13px 14px;border-radius:3px;
+  }
+  .gate input:focus{border-color:var(--ink-faint);outline:none}
+  .gate input.bad{border-color:var(--home);animation:shake .34s}
+  @keyframes shake{10%,90%{transform:translateX(-2px)}30%,70%{transform:translateX(4px)}50%{transform:translateX(-5px)}}
+  .gate button{
+    font-family:var(--disp);font-size:16px;letter-spacing:.14em;text-transform:uppercase;
+    background:var(--ink);color:#0A1017;border:0;padding:12px;border-radius:3px;cursor:pointer;
+    font-weight:600;transition:.16s;
+  }
+  .gate button:hover{background:#fff}
+  .gate .err{min-height:16px;font-size:12px;color:var(--home);letter-spacing:.02em}
+  .gate .foot{margin-top:18px;font-size:11px;color:var(--ink-faint);line-height:1.5}
+  /* Gate is up until JS clears it, so the page never flashes unlocked. */
+  body.locked .wrap{display:none}
+
   @media (prefers-reduced-motion:reduce){
     *{animation:none !important;transition:none !important}
   }
 </style>
 </head>
-<body>
+<body class="locked">
+
+<div class="gate" id="gate">
+  <div class="gatebox">
+    <p class="eyebrow">Backride Dates</p>
+    <h1>Members <em>only</em></h1>
+    <p>This is a private preview. Enter the access code to open the map.</p>
+    <form id="gateForm" autocomplete="off">
+      <input id="gateInput" type="password" inputmode="text" placeholder="Access code"
+             aria-label="Access code" autocapitalize="off" autocorrect="off" spellcheck="false">
+      <div class="err" id="gateErr" role="alert"></div>
+      <button type="submit">Unlock</button>
+    </form>
+    <p class="foot">Lost the code? Ask whoever shared this link.</p>
+  </div>
+</div>
+
+<script>
+// ---------- access gate (soft, client-side) ----------
+// CODE lives in the page source, so this deters casual visitors; it is not
+// security. To change the code, edit the line below and redeploy.
+(function(){
+  const CODE="Angelica020817";
+  const UKEY="backride:unlocked";
+  const gate=document.getElementById("gate");
+  const form=document.getElementById("gateForm");
+  const input=document.getElementById("gateInput");
+  const err=document.getElementById("gateErr");
+
+  function unlock(){
+    document.body.classList.remove("locked");
+    gate.hidden=true;
+    try{ localStorage.setItem(UKEY, CODE); }catch(e){}
+  }
+  // Already unlocked on this device? Skip the gate. The stored value must still
+  // match the current code, so rotating the code re-locks everyone.
+  let saved=null;
+  try{ saved=localStorage.getItem(UKEY); }catch(e){}
+  if(saved===CODE){ unlock(); }
+  else{
+    // Keep focus in the field; the page stays hidden behind the gate.
+    setTimeout(()=>input.focus(), 60);
+  }
+
+  form.addEventListener("submit", e=>{
+    e.preventDefault();
+    if(input.value.trim()===CODE){ err.textContent=""; unlock(); }
+    else{
+      err.textContent="That code is not right. Try again.";
+      input.classList.remove("bad"); void input.offsetWidth; input.classList.add("bad");
+      input.select();
+    }
+  });
+})();
+</script>
 
 <div class="wrap">
 <header>
